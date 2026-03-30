@@ -19,6 +19,12 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      - name: Verificar Credenciales
+        run: |
+          if [ -z "${{ secrets.INTERVALS_ICU_ID }}" ]; then echo "ERROR: INTERVALS_ICU_ID no encontrado en Secrets."; exit 1; fi
+          if [ -z "${{ secrets.INTERVALS_ICU_API_KEY }}" ]; then echo "ERROR: INTERVALS_ICU_API_KEY no encontrado en Secrets."; exit 1; fi
+          echo "Credenciales detectadas correctamente."
+
       - name: Sync Data (Download 30 Activities)
         env:
           ID: ${{ secrets.INTERVALS_ICU_ID }}
@@ -32,10 +38,6 @@ jobs:
           athlete_id = ''.join(filter(str.isdigit, raw_id))
           api_key = os.environ.get('KEY', '')
           
-          if not athlete_id or not api_key:
-              print('Error: Faltan credenciales')
-              exit(1)
-          
           url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
           response = requests.get(url, auth=('API_KEY', api_key), params={'limit': 30})
           
@@ -43,9 +45,9 @@ jobs:
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
                   json.dump(response.json(), f, indent=2)
-              print('Datos descargados correctamente')
+              print('Sincronización completada con éxito.')
           else:
-              print(f'Error: {response.status_code} - {response.text}')
+              print(f'Error de API {response.status_code}: {response.text}')
               exit(1)
           "
 
@@ -54,5 +56,5 @@ jobs:
           git config --global user.name "Section 11 Bot"
           git config --global user.email "bot@section11.ai"
           git add .
-          git commit -m "Update training data with actual activities" || exit 0
+          git commit -m "Sincronización 30 actividades" || exit 0
           git push
