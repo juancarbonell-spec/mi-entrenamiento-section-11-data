@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Sync data
-        uses: CrankAddict/section-11action@main
+        uses: CrankAddict/section-11/action@main
         with:
           athlete_id: ${{ secrets.INTERVALS_ATHLETE_ID }}
           api_key: ${{ secrets.INTERVALS_API_KEY }}
