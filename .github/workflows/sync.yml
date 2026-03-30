@@ -1,4 +1,4 @@
-name: Full Training Engine
+name: Full Training Engine V6
 
 on:
   schedule:
@@ -28,7 +28,7 @@ jobs:
       - name: Full Training Engine (V2→V6)
         run: |
           python << 'EOF'
-          import requests, os, json, re
+          import requests, os, json
           from datetime import datetime, timedelta
 
           # -----------------------------
@@ -139,30 +139,25 @@ jobs:
           else: status="SIN mejora clara"
 
           # -----------------------------
-          # 9️⃣ Generar dossier V4
+          # 9️⃣ Generar dossier V4 (cadenas seguras)
           # -----------------------------
-          dossier=f'''
-# ATHLETE DOSSIER V4
-
-## Última actividad
-- Fecha: {last.get('start_date')}
-- Distancia: {last.get('distance',0)/1000:.2f} km
-- FC media: {avg_hr:.0f}
-
-## Intensidad
-- Bloques Z4/Z5 detectados: {len(blocks)}
-
-## Base aeróbica
-- Desacople: {dec:.2f} %
-
-## Eficiencia
-- Speed/HR: {efficiency:.4f}
-- vVO2max: {v_trend:.2f} km/h
-
-## Comparación última sesión
-- {status}
-- Fatiga (ATL-CTL): {fatigue:.1f}
-'''
+          dossier = (
+              "# ATHLETE DOSSIER V4\n\n"
+              "## Última actividad\n"
+              f"- Fecha: {last.get('start_date')}\n"
+              f"- Distancia: {last.get('distance',0)/1000:.2f} km\n"
+              f"- FC media: {avg_hr:.0f}\n\n"
+              "## Intensidad\n"
+              f"- Bloques Z4/Z5 detectados: {len(blocks)}\n\n"
+              "## Base aeróbica\n"
+              f"- Desacople: {dec:.2f} %\n\n"
+              "## Eficiencia\n"
+              f"- Speed/HR: {efficiency:.4f}\n"
+              f"- vVO2max: {v_trend:.2f} km/h\n\n"
+              "## Comparación última sesión\n"
+              f"- {status}\n"
+              f"- Fatiga (ATL-CTL): {fatigue:.1f}\n"
+          )
           with open("ATHLETE_DOSSIER.md","w") as f: f.write(dossier)
           print("✅ Dossier V4 generado")
 
@@ -202,8 +197,8 @@ jobs:
               else: new_s=s
               new_plan.append((d,new_s))
 
-          output=f"# PLAN SEMANAL ADAPTATIVO V6\n\nBloque: {block}\nEstado: {state}\nTendencia VO2max: {v_trend:.2f}\n\n## PLAN AJUSTADO\n"
-          for d,s in new_plan: output+=f"- {d}: {s}\n"
+          output = f"# PLAN SEMANAL ADAPTATIVO V6\n\nBloque: {block}\nEstado: {state}\nTendencia VO2max: {v_trend:.2f}\n\n## PLAN AJUSTADO\n"
+          for d,s in new_plan: output += f"- {d}: {s}\n"
 
           with open("TRAINING_PLAN.md","w") as f: f.write(output)
           print("✅ Plan V6 generado con ajuste dinámico")
