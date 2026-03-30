@@ -11,6 +11,7 @@ jobs:
     env:
       INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
       INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -25,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Full Training Engine (V2→V6)
+      - name: Full Training Engine V6
         run: |
           python << 'EOF'
           import requests, os, json
@@ -56,14 +57,18 @@ jobs:
           print(f"✅ {len(activities)} actividades sincronizadas")
 
           # -----------------------------
-          # 2️⃣ Filtrar runs
+          # 2️⃣ Filtrar carreras válidas
           # -----------------------------
           Z4, Z5 = 148, 158
           runs = sorted([a for a in activities if a.get("type")=="Run"], key=lambda x: x.get("start_date",""))
-          if len(runs)<2: print("⚠️ Pocos datos aún")
+          valid_runs = [r for r in runs if r.get("distance",0)/1000 >= 1 and r.get("moving_time",0)/60 >= 10]
 
-          last = runs[-1]
-          prev = runs[-2] if len(runs)>1 else last
+          if not valid_runs:
+              print("⚠️ No hay carreras válidas para procesar")
+              exit(0)
+
+          last = valid_runs[-1]
+          prev = valid_runs[-2] if len(valid_runs)>1 else last
 
           # -----------------------------
           # 3️⃣ Obtener streams detalle
@@ -112,13 +117,13 @@ jobs:
               d=a.get("distance",0)/1000
               t=a.get("moving_time",1)/3600
               return (d/t)*1.08 if t>0 else 0
-          v_series=[estimate_vvo2(r) for r in runs[-10:]]
+          v_series=[estimate_vvo2(r) for r in valid_runs[-10:]]
           v_trend=sum(v_series)/len(v_series)
 
           # -----------------------------
           # 7️⃣ Carga (CTL/ATL)
           # -----------------------------
-          loads=[r.get("moving_time",0)/60 for r in runs[-30:]]
+          loads=[r.get("moving_time",0)/60 for r in valid_runs[-30:]]
           ctl=sum(loads)/len(loads) if loads else 0
           atl=sum(loads[-7:])/7 if len(loads)>=7 else ctl
           fatigue=atl-ctl
@@ -139,7 +144,7 @@ jobs:
           else: status="SIN mejora clara"
 
           # -----------------------------
-          # 9️⃣ Generar dossier V4 (cadenas seguras)
+          # 9️⃣ Generar dossier V4
           # -----------------------------
           dossier = (
               "# ATHLETE DOSSIER V4\n\n"
@@ -162,7 +167,7 @@ jobs:
           print("✅ Dossier V4 generado")
 
           # -----------------------------
-          # 10️⃣ Plan adaptativo V5 y ajuste V6
+          # 10️⃣ Plan adaptativo V6
           # -----------------------------
           def vo2_session(): return "VO2max: 5x3' Z5 (rec 2') + calentamiento/enfriamiento"
           def base_session(): return "Rodaje Z2 45-60min estable"
@@ -185,7 +190,7 @@ jobs:
                   session=vo2_session() if i in [1,4] else (recovery() if i==6 else base_session())
               plan.append((day.strftime("%A"), session))
 
-          # Periodización 4 semanas
+          # Ajustes según bloque semanal
           week_number=int(today.strftime("%U"))
           phase=week_number%4
           block="descarga" if phase==3 else "carga"
@@ -197,9 +202,15 @@ jobs:
               else: new_s=s
               new_plan.append((d,new_s))
 
-          output = f"# PLAN SEMANAL ADAPTATIVO V6\n\nBloque: {block}\nEstado: {state}\nTendencia VO2max: {v_trend:.2f}\n\n## PLAN AJUSTADO\n"
+          output = f"# PLAN SEMANAL ADAPTIVO V6\n\nBloque: {block}\nEstado: {state}\nTendencia VO2max: {v_trend:.2f}\n\n## PLAN AJUSTADO\n"
           for d,s in new_plan: output += f"- {d}: {s}\n"
 
           with open("TRAINING_PLAN.md","w") as f: f.write(output)
           print("✅ Plan V6 generado con ajuste dinámico")
           EOF
+
+      - name: Subir JSON de actividades como artefacto
+        uses: actions/upload-artifact@v3
+        with:
+          name: activities_data
+          path: data/activities_history.json
