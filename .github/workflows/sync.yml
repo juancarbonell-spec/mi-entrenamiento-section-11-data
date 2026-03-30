@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -27,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Full Training Engine V7 - Sync Activities
+      - name: Sync Activities from Intervals.icu
         run: |
           python << 'EOF'
           import requests, os, json
@@ -37,83 +37,98 @@ jobs:
           api_key = os.environ.get("INTERVALS_API_KEY","").strip()
 
           if not athlete_id or not api_key:
-              print("❌ Faltan secrets INTERVALS")
+              print("❌ ERROR: Faltan secrets en GitHub Settings")
               exit(1)
 
-          url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities"
+          # Definimos las URLs a probar
+          urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
+              f"https://intervals.icu/api/v1/athlete/0/activities"
+          ]
+          
           params = {"oldest": (datetime.now()-timedelta(days=365)).strftime("%Y-%m-%d")}
+          activities = None
 
-          r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
-          if r.status_code != 200:
-              print("❌ Error sync:", r.text[:500])
+          for url in urls:
+              print(f"Probando sincronización en: {url}...")
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      activities = r.json()
+                      print(f"✅ ÉXITO: {len(activities)} actividades obtenidas.")
+                      break
+                  else:
+                      print(f"⚠️ Fallo en {url}: {r.status_code} {r.text[:100]}")
+              except Exception as e:
+                  print(f"❌ Error de conexión: {e}")
+
+          if not activities:
+              print("❌ No se pudo sincronizar con ninguna URL. Revisa tu API Key.")
               exit(1)
 
-          activities = r.json()
           os.makedirs("data", exist_ok=True)
-          file_path = "data/activities_history.json"
-          with open(file_path,"w",encoding="utf-8") as f:
-              json.dump(activities,f,indent=2,ensure_ascii=False)
-          print(f"✅ {len(activities)} actividades sincronizadas")
+          with open("data/activities_history.json", "w", encoding="utf-8") as f:
+              json.dump(activities, f, indent=2, ensure_ascii=False)
           EOF
 
-      - name: Generar dossier y plan avanzado
+      - name: Analyze Performance and Generate Dossier
         run: |
           python << 'EOF'
           import os, json
           from datetime import datetime, timedelta
 
-          Z4, Z5 = 148, 158
-          def sec2min(s): return s/60 if s else 0
+          # Configuración de Zonas
+          Z4_START, Z5_START = 148, 158
 
           if not os.path.exists("data/activities_history.json"):
-              print("Archivo no encontrado")
+              print("Archivo de datos no encontrado.")
               exit(1)
 
           with open("data/activities_history.json", "r", encoding="utf-8") as f:
               activities = json.load(f)
 
           runs = sorted([a for a in activities if a.get("type")=="Run"], key=lambda x: x.get("start_date",""))
-          valid_runs = [r for r in runs if r.get("distance",0)/1000 >= 1 and sec2min(r.get("moving_time",0)) >= 10]
+          valid_runs = [r for r in runs if r.get("distance", 0) > 1000]
 
           if not valid_runs:
-              print("⚠️ No hay carreras válidas")
+              print("No hay carreras para analizar.")
               exit(0)
 
           last = valid_runs[-1]
-          prev = valid_runs[-2] if len(valid_runs)>1 else last
+          prev = valid_runs[-2] if len(valid_runs) > 1 else last
 
-          def analyze_run(a):
-              d_km = a.get("distance",0)/1000
-              t_min = sec2min(a.get("moving_time",0))
-              hr = a.get("average_heartrate",0)
-              pace = t_min/d_km if d_km>0 else 0
-              vvo2max = d_km / (t_min/60) if t_min>0 else 0
-              ec = (d_km*1000)/hr if hr>0 else 0
-              return {"pace": pace, "hr": hr, "vvo2max": vvo2max, "economy": ec}
+          def get_metrics(a):
+              d_km = a.get("distance", 0) / 1000
+              t_h = (a.get("moving_time", 0)) / 3600
+              hr = a.get("average_heartrate", 0)
+              vvo2max = d_km / t_h if t_h > 0 else 0
+              # Economía: Metros por latido total (Distancia / (HR * Minutos))
+              economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
+              return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
 
-          m_l = analyze_run(last)
-          m_p = analyze_run(prev)
-          status = "MEJORA" if m_l['vvo2max'] >= m_p['vvo2max'] else "ESTABLE"
+          m_l = get_metrics(last)
+          m_p = get_metrics(prev)
 
           dossier = (
-              "# ATHLETE DOSSIER V7 AVANZADO\n\n"
-              f"Última actividad: {last.get('start_date')}\n"
-              f"Distancia: {last.get('distance',0)/1000:.2f} km\n"
-              f"vVO2max estimada: {m_l['vvo2max']:.2f} km/h\n"
-              f"Economía: {m_l['economy']:.2f} m/latido\n"
-              f"Estado: {status}\n"
+              f"# ATHLETE DOSSIER V7\n\n"
+              f"**Última Carrera:** {last.get('start_date')[:10]}\n"
+              f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
+              f"- **Distancia:** {m_l['dist']:.2f} km\n"
+              f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
+              f"- **Economía de carrera:** {m_l['ec']:.2f} m/latido\n\n"
+              f"**Progreso:** {'📈 Mejora' if m_l['v'] >= m_p['v'] else '📉 Estable'}\n"
           )
 
           with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
               f.write(dossier)
 
-          today = datetime.now()
-          plan = [f"- {(today + timedelta(days=i)).strftime('%A')}: Rodaje Z2" for i in range(7)]
-          with open("TRAINING_PLAN.md","w", encoding="utf-8") as f:
-              f.write("# PLAN SEMANAL\n\n" + "\n".join(plan))
+          # Plan simple
+          plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
+          with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
+              f.write(plan)
           EOF
 
-      - name: Commit and Push changes
+      - name: Push results to Repository
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
