@@ -1,47 +1,62 @@
-- name: Sync Intervals Data
-  env:
-    INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
-  run: |
-    python << 'EOF'
-    import requests
-    import os
-    import json
-    from datetime import datetime, timedelta
+name: Sync Intervals Data
 
-    api_key = os.environ.get('INTERVALS_API_KEY', '').strip()
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
 
-    if not api_key:
-        print('❌ Falta el secret INTERVALS_ICU_API_KEY')
-        exit(1)
+jobs:
+  sync:
+    runs-on: ubuntu-latest
 
-    url = 'https://intervals.icu/api/v1/athlete/0/activities'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    params = {
-        'oldest': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-    }
+      - name: Sync Intervals Data
+        env:
+          INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+        run: |
+          python << 'EOF'
+          import requests
+          import os
+          import json
+          from datetime import datetime, timedelta
 
-    print('🔄 Conectando a Intervals.icu...')
+          api_key = os.environ.get('INTERVALS_API_KEY', '').strip()
 
-    response = requests.get(
-        url,
-        auth=(api_key, ''),   # ✅ Auth correcta
-        params=params,
-        timeout=30
-    )
+          if not api_key:
+              print('❌ Falta el secret INTERVALS_ICU_API_KEY')
+              exit(1)
 
-    print(f'Status Code: {response.status_code}')
+          url = 'https://intervals.icu/api/v1/athlete/0/activities'
 
-    if response.status_code == 200:
-        data = response.json()
+          params = {
+              'oldest': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+          }
 
-        os.makedirs('data', exist_ok=True)
+          print('🔄 Conectando a Intervals.icu...')
 
-        with open('data/activities_history.json', 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+          response = requests.get(
+              url,
+              auth=(api_key, ''),
+              params=params,
+              timeout=30
+          )
 
-        print(f'✅ Guardadas {len(data)} actividades')
-    else:
-        print('❌ Error:')
-        print(response.text[:1000])
-        exit(1)
-    EOF
+          print(f'Status Code: {response.status_code}')
+
+          if response.status_code == 200:
+              data = response.json()
+
+              os.makedirs('data', exist_ok=True)
+
+              with open('data/activities_history.json', 'w', encoding='utf-8') as f:
+                  json.dump(data, f, indent=2, ensure_ascii=False)
+
+              print(f'✅ Guardadas {len(data)} actividades')
+          else:
+              print('❌ Error:')
+              print(response.text[:1000])
+              exit(1)
+          EOF
