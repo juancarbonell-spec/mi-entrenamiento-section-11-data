@@ -24,20 +24,25 @@ jobs:
         run: |
           python -c "
           import requests, os, json
-          athlete_id = os.environ['ID'].strip().replace('i', '') # Limpia la 'i' si existe
-          api_key = os.environ['KEY'].strip()
           
-          # URL corregida para lista de actividades
+          athlete_id = os.environ.get('ID', '').strip().replace('i', '')
+          api_key = os.environ.get('KEY', '').strip()
+          
+          if not athlete_id or not api_key:
+              print('ERROR: No se encontraron los SECRETOS (ID o KEY) en GitHub Settings.')
+              exit(1)
+          
           url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
           params = {'limit': 30}
           
+          print(f'Intentando conectar al ID: {athlete_id}...')
           response = requests.get(url, auth=('API_KEY', api_key), params=params)
           
           if response.status_code == 200:
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
                   json.dump(response.json(), f, indent=2)
-              print(f'Sincronización exitosa.')
+              print('¡Sincronización exitosa! 30 actividades descargadas.')
           else:
               print(f'Error {response.status_code}: {response.text}')
               exit(1)
