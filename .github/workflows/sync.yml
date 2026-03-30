@@ -1,50 +1,47 @@
-      - name: Sync Data
-        env:
-          INTERVALS_ID: ${{ secrets.INTERVALS_ICU_ID }}
-          INTERVALS_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
-        run: |
-          python -c "
-import requests
-import os
-import json
-from datetime import datetime, timedelta
+- name: Sync Intervals Data
+  env:
+    INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+  run: |
+    python << 'EOF'
+    import requests
+    import os
+    import json
+    from datetime import datetime, timedelta
 
-athlete_id = os.environ.get('INTERVALS_ID', '').strip()
-api_key    = os.environ.get('INTERVALS_KEY', '').strip()
+    api_key = os.environ.get('INTERVALS_API_KEY', '').strip()
 
-if not athlete_id or not api_key:
-    print('❌ Error: Faltan los secrets INTERVALS_ICU_ID o INTERVALS_ICU_API_KEY')
-    exit(1)
+    if not api_key:
+        print('❌ Falta el secret INTERVALS_ICU_API_KEY')
+        exit(1)
 
-# Usamos /athlete/0/activities (recomendado cuando usas tu propia API Key)
-url = 'https://intervals.icu/api/v1/athlete/0/activities'
+    url = 'https://intervals.icu/api/v1/athlete/0/activities'
 
-params = {
-    'oldest': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-}
+    params = {
+        'oldest': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    }
 
-print(f'🔄 Conectando a Intervals.icu (ID: {athlete_id})...')
+    print('🔄 Conectando a Intervals.icu...')
 
-# Autenticación correcta con Basic Auth
-response = requests.get(
-    url,
-    auth=('API_KEY', api_key),
-    params=params,
-    timeout=30
-)
+    response = requests.get(
+        url,
+        auth=(api_key, ''),   # ✅ Auth correcta
+        params=params,
+        timeout=30
+    )
 
-print(f'Status Code: {response.status_code}')
+    print(f'Status Code: {response.status_code}')
 
-if response.status_code == 200:
-    data = response.json()
-    os.makedirs('data', exist_ok=True)
-    
-    with open('data/activities_history.json', 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-    
-    print(f'✅ ¡Éxito! Se guardaron {len(data)} actividades.')
-else:
-    print('❌ Error al obtener datos:')
-    print(response.text[:1500])
-    exit(1)
-          "
+    if response.status_code == 200:
+        data = response.json()
+
+        os.makedirs('data', exist_ok=True)
+
+        with open('data/activities_history.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        print(f'✅ Guardadas {len(data)} actividades')
+    else:
+        print('❌ Error:')
+        print(response.text[:1000])
+        exit(1)
+    EOF
