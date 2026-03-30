@@ -1,60 +1,32 @@
-name: Intervals.icu Sync
-
-on:
-  schedule:
-    - cron: '*/15 * * * *' 
-  workflow_dispatch: 
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: pip install requests
-
       - name: Sync Data
         env:
           ID: ${{ secrets.INTERVALS_ICU_ID }}
           KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
         run: |
           python -c "
-          import requests, os, json
+          import requests, os, json, base64
           from datetime import datetime, timedelta
           
-          # Limpiamos el ID
           athlete_id = ''.join(filter(str.isdigit, os.environ.get('ID', '')))
           api_key = os.environ.get('KEY', '').strip()
           
-          # Fecha de inicio para las 30 actividades
-          oldest = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+          # Autenticación manual para evitar errores de librerías
+          auth_str = f'API_KEY:{api_key}'
+          encoded_auth = base64.b64encode(auth_str.encode()).decode()
+          headers = {'Authorization': f'Basic {encoded_auth}'}
           
+          oldest = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
           url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
           
-          # La API de Intervals requiere el usuario 'API_KEY' literalmente
-          response = requests.get(url, auth=('API_KEY', api_key), params={'oldest': oldest, 'limit': 30})
+          print(f'Intentando acceso al ID: {athlete_id}')
+          response = requests.get(url, headers=headers, params={'oldest': oldest, 'limit': 30})
           
           if response.status_code == 200:
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
                   json.dump(response.json(), f, indent=2)
-              print('¡ÉXITO! Datos descargados.')
-          elif response.status_code == 403:
-              print('ERROR 403: La API Key no es válida para este Athlete ID. Revisa Settings en Intervals.')
-              exit(1)
+              print('¡Sincronización exitosa!')
           else:
               print(f'Error {response.status_code}: {response.text}')
               exit(1)
           "
-
-      - name: Commit and Push
-        run: |
-          git config --global user.name "Section 11 Bot"
-          git config --global user.email "bot@section11.ai"
-          git add .
-          git commit -m "Sincronización historial" || exit 0
-          git push
