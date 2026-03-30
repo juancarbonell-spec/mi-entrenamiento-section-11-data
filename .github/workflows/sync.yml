@@ -1,35 +1,63 @@
-      - name: Fetch Last 30 Activities
+name: Intervals.icu Sync (30 Activities)
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch Data
         env:
-          # Asegúrate de que estos nombres coincidan EXACTAMENTE con tus Settings > Secrets
+          # Estas variables deben existir en Settings > Secrets > Actions
           ID: ${{ secrets.INTERVALS_ICU_ID }}
           KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
         run: |
           python -c "
           import requests, os, json
           
-          # Intentamos capturar los secretos
-          raw_id = os.environ.get('ID', '')
-          api_key = os.environ.get('KEY', '')
-          
-          # Limpiamos el ID de cualquier letra 'i' o espacios
-          athlete_id = ''.join(filter(str.isdigit, raw_id))
+          # Limpieza radical del ID por si tiene la 'i' o espacios
+          raw_id = os.getenv('ID', '')
+          athlete_id = ''.join(c for c in raw_id if c.isdigit())
+          api_key = os.getenv('KEY', '').strip()
           
           if not athlete_id or not api_key:
-              print(f'ERROR CRÍTICO: ID detectado: \"{athlete_id}\". API_KEY detectada: {\"SÍ\" if api_key else \"NO\"}.')
-              print('Revisa Settings > Secrets and variables > Actions')
+              print(f'ERROR: Credenciales incompletas. ID: {athlete_id}')
               exit(1)
 
-          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities?limit=30'
-          print(f'Conectando a: https://intervals.icu/api/v1/athlete/{athlete_id}/activities')
+          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
+          print(f'Conectando al atleta {athlete_id}...')
           
-          response = requests.get(url, auth=('API_KEY', api_key))
+          response = requests.get(
+              url, 
+              auth=('API_KEY', api_key), 
+              params={'limit': 30}
+          )
           
           if response.status_code == 200:
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
                   json.dump(response.json(), f, indent=2)
-              print('Sincronización exitosa: 30 actividades guardadas.')
+              print('¡Éxito! 30 actividades guardadas en /data.')
           else:
               print(f'Error {response.status_code}: {response.text}')
               exit(1)
           "
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Section 11 Bot"
+          git config --global user.email "bot@section11.ai"
+          git add data/activities_history.json
+          git commit -m "Sincronización historial 30 actividades" || exit 0
+          git push
