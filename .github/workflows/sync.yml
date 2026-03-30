@@ -1,32 +1,51 @@
-      - name: Sync Data
-        env:
-          ID: ${{ secrets.INTERVALS_ICU_ID }}
-          KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
-        run: |
-          python -c "
-          import requests, os, json, base64
-          from datetime import datetime, timedelta
-          
-          athlete_id = ''.join(filter(str.isdigit, os.environ.get('ID', '')))
-          api_key = os.environ.get('KEY', '').strip()
-          
-          # Autenticación manual para evitar errores de librerías
-          auth_str = f'API_KEY:{api_key}'
-          encoded_auth = base64.b64encode(auth_str.encode()).decode()
-          headers = {'Authorization': f'Basic {encoded_auth}'}
-          
-          oldest = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
-          
-          print(f'Intentando acceso al ID: {athlete_id}')
-          response = requests.get(url, headers=headers, params={'oldest': oldest, 'limit': 30})
-          
-          if response.status_code == 200:
-              os.makedirs('data', exist_ok=True)
-              with open('data/activities_history.json', 'w') as f:
-                  json.dump(response.json(), f, indent=2)
-              print('¡Sincronización exitosa!')
-          else:
-              print(f'Error {response.status_code}: {response.text}')
-              exit(1)
-          "
+- name: Sync Data
+      env:
+        INTERVALS_ID: ${{ secrets.INTERVALS_ICU_ID }}
+        INTERVALS_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+      run: |
+        python -c "
+        import requests, os, json, base64
+        from datetime import datetime, timedelta
+
+        # 1. Limpieza estricta de variables de entorno
+        raw_id = os.environ.get('INTERVALS_ID', '')
+        athlete_id = ''.join(filter(str.isdigit, raw_id))
+        api_key = os.environ.get('INTERVALS_KEY', '').strip()
+
+        if not athlete_id or not api_key:
+            print('❌ ERROR: INTERVALS_ICU_ID o API_KEY no configurados en Secrets.')
+            exit(1)
+
+        # 2. Formateo de Autenticación (Standard Basic Auth)
+        # El usuario es SIEMPRE la cadena literal 'API_KEY'
+        user_pass = f'API_KEY:{api_key}'
+        encoded_u_p = base64.b64encode(user_pass.encode('utf-8')).decode('utf-8')
+        
+        headers = {
+            'Authorization': f'Basic {encoded_u_p}',
+            'Accept': 'application/json'
+        }
+
+        # 3. Petición al API
+        # Nota: Usamos la URL base sin /athlete/ si el ID ya es el del atleta
+        url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
+        oldest = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        
+        print(f'Conectando con Atleta ID: {athlete_id}...')
+        
+        try:
+            response = requests.get(url, headers=headers, params={'oldest': oldest})
+            
+            if response.status_code == 200:
+                os.makedirs('data', exist_ok=True)
+                with open('data/activities_history.json', 'w') as f:
+                    json.dump(response.json(), f, indent=2)
+                print('✅ ¡Sincronización exitosa! Archivo guardado en data/activities_history.json')
+            else:
+                print(f'❌ Error de Intervals.icu: {response.status_code}')
+                print(f'Respuesta: {response.text}')
+                exit(1)
+        except Exception as e:
+            print(f'❌ Error de red/sistema: {e}')
+            exit(1)
+        "
