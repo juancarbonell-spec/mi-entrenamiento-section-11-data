@@ -24,25 +24,18 @@ jobs:
         run: |
           python -c "
           import requests, os, json
+          # Limpieza automática de la 'i' y espacios
+          athlete_id = os.environ['ID'].strip().lstrip('i')
+          api_key = os.environ['KEY'].strip()
           
-          athlete_id = os.environ.get('ID', '').strip().replace('i', '')
-          api_key = os.environ.get('KEY', '').strip()
-          
-          if not athlete_id or not api_key:
-              print('ERROR: No se encontraron los SECRETOS (ID o KEY) en GitHub Settings.')
-              exit(1)
-          
-          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
-          params = {'limit': 30}
-          
-          print(f'Intentando conectar al ID: {athlete_id}...')
-          response = requests.get(url, auth=('API_KEY', api_key), params=params)
+          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities?limit=30'
+          response = requests.get(url, auth=('API_KEY', api_key))
           
           if response.status_code == 200:
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
                   json.dump(response.json(), f, indent=2)
-              print('¡Sincronización exitosa! 30 actividades descargadas.')
+              print('Sincronización completada con éxito.')
           else:
               print(f'Error {response.status_code}: {response.text}')
               exit(1)
@@ -53,5 +46,5 @@ jobs:
           git config --global user.name "Section 11 Bot"
           git config --global user.email "bot@section11.ai"
           git add data/activities_history.json
-          git commit -m "Update 30 activities" || exit 0
+          git commit -m "Update 30 activities history" || exit 0
           git push
