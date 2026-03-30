@@ -2,8 +2,7 @@ name: Full Training Engine
 
 on:
   schedule:
-    # Ejecuta cada día a las 6:00
-    - cron: '0 6 * * *'
+    - cron: '0 6 * * *'  # se ejecuta cada día a las 6:00
   workflow_dispatch:
 
 jobs:
@@ -142,7 +141,7 @@ jobs:
           # -----------------------------
           # 9️⃣ Generar dossier V4
           # -----------------------------
-          dossier=f"""
+          dossier=f'''
 # ATHLETE DOSSIER V4
 
 ## Última actividad
@@ -163,7 +162,7 @@ jobs:
 ## Comparación última sesión
 - {status}
 - Fatiga (ATL-CTL): {fatigue:.1f}
-"""
+'''
           with open("ATHLETE_DOSSIER.md","w") as f: f.write(dossier)
           print("✅ Dossier V4 generado")
 
