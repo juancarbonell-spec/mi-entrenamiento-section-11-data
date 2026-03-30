@@ -2,7 +2,7 @@ name: Full Training Engine V6
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # se ejecuta cada día a las 6:00
+    - cron: '0 6 * * *'  # cada día a las 6:00
   workflow_dispatch:
 
 jobs:
@@ -210,7 +210,7 @@ jobs:
           EOF
 
       - name: Subir JSON de actividades como artefacto
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: activities_data
           path: data/activities_history.json
