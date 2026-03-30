@@ -40,7 +40,8 @@ jobs:
               print("❌ ERROR: Faltan secrets en GitHub Settings")
               exit(1)
 
-          # Definimos las URLs a probar
+          os.makedirs("data", exist_ok=True)
+
           urls = [
               f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
               f"https://intervals.icu/api/v1/athlete/0/activities"
@@ -66,7 +67,6 @@ jobs:
               print("❌ No se pudo sincronizar con ninguna URL. Revisa tu API Key.")
               exit(1)
 
-          os.makedirs("data", exist_ok=True)
           with open("data/activities_history.json", "w", encoding="utf-8") as f:
               json.dump(activities, f, indent=2, ensure_ascii=False)
           EOF
@@ -77,7 +77,6 @@ jobs:
           import os, json
           from datetime import datetime, timedelta
 
-          # Configuración de Zonas
           Z4_START, Z5_START = 148, 158
 
           if not os.path.exists("data/activities_history.json"):
@@ -102,7 +101,6 @@ jobs:
               t_h = (a.get("moving_time", 0)) / 3600
               hr = a.get("average_heartrate", 0)
               vvo2max = d_km / t_h if t_h > 0 else 0
-              # Economía: Metros por latido total (Distancia / (HR * Minutos))
               economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
               return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
 
@@ -122,7 +120,6 @@ jobs:
           with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
               f.write(dossier)
 
-          # Plan simple
           plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
           with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
               f.write(plan)
@@ -133,5 +130,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json
-          git commit -m "Update training data [skip ci]" || echo "No changes"
+          git commit -m "Update activities and training data [skip ci]" || echo "No changes"
           git push
