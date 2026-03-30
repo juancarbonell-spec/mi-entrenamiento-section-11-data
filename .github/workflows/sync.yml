@@ -1,0 +1,16 @@
+name: Intervals.icu Sync
+on:
+  schedule:
+    - cron: '*/15 * * * *' # Se ejecuta cada 15 minutos
+  workflow_dispatch: # Permite ejecutarlo manualmente
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync data
+        uses: CrankAddict/section-11@main
+        with:
+          athlete_id: ${{ secrets.INTERVALS_ATHLETE_ID }}
+          api_key: ${{ secrets.INTERVALS_API_KEY }}
