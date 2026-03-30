@@ -2,20 +2,18 @@ name: Intervals.icu Sync (30 Activities)
 
 on:
   schedule:
-    - cron: '0 * * * *' # Se ejecuta cada hora para ahorrar batería de API
-  workflow_dispatch: # Permite ejecución manual
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
       - name: Install dependencies
         run: pip install requests
 
@@ -26,23 +24,22 @@ jobs:
         run: |
           python -c "
           import requests, os, json
+          athlete_id = os.environ['ID'].strip().replace('i', '') # Limpia la 'i' si existe
+          api_key = os.environ['KEY'].strip()
           
-          athlete_id = os.environ['ID']
-          api_key = os.environ['KEY']
-          auth = ('API_KEY', api_key)
+          # URL corregida para lista de actividades
+          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
+          params = {'limit': 30}
           
-          # Pedimos las últimas 30 actividades
-          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities?limit=30'
-          response = requests.get(url, auth=auth)
+          response = requests.get(url, auth=('API_KEY', api_key), params=params)
           
           if response.status_code == 200:
-              activities = response.json()
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
-                  json.dump(activities, f, indent=2)
-              print(f'Sincronizadas {len(activities)} actividades.')
+                  json.dump(response.json(), f, indent=2)
+              print(f'Sincronización exitosa.')
           else:
-              print(f'Error: {response.status_code}')
+              print(f'Error {response.status_code}: {response.text}')
               exit(1)
           "
 
@@ -51,5 +48,5 @@ jobs:
           git config --global user.name "Section 11 Bot"
           git config --global user.email "bot@section11.ai"
           git add data/activities_history.json
-          git commit -m "Actualizar historial de 30 actividades" || exit 0
+          git commit -m "Update 30 activities" || exit 0
           git push
