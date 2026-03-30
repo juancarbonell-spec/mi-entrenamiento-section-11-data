@@ -10,16 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
       - name: Install dependencies
         run: pip install requests
 
-      - name: Sync Data (Download Last 30 Activities)
+      - name: Sync Data
         env:
           ID: ${{ secrets.INTERVALS_ICU_ID }}
           KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
@@ -28,25 +26,26 @@ jobs:
           import requests, os, json
           from datetime import datetime, timedelta
           
+          # Limpiamos el ID
           athlete_id = ''.join(filter(str.isdigit, os.environ.get('ID', '')))
-          api_key = os.environ.get('KEY', '')
+          api_key = os.environ.get('KEY', '').strip()
           
-          # Definimos una fecha de inicio (hace 1 año) para asegurar que encuentre las 30 actividades
-          oldest_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+          # Fecha de inicio para las 30 actividades
+          oldest = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
           
           url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
-          params = {
-              'oldest': oldest_date,
-              'limit': 30
-          }
           
-          response = requests.get(url, auth=('API_KEY', api_key), params=params)
+          # La API de Intervals requiere el usuario 'API_KEY' literalmente
+          response = requests.get(url, auth=('API_KEY', api_key), params={'oldest': oldest, 'limit': 30})
           
           if response.status_code == 200:
               os.makedirs('data', exist_ok=True)
               with open('data/activities_history.json', 'w') as f:
                   json.dump(response.json(), f, indent=2)
-              print('Sincronización exitosa.')
+              print('¡ÉXITO! Datos descargados.')
+          elif response.status_code == 403:
+              print('ERROR 403: La API Key no es válida para este Athlete ID. Revisa Settings en Intervals.')
+              exit(1)
           else:
               print(f'Error {response.status_code}: {response.text}')
               exit(1)
@@ -57,5 +56,5 @@ jobs:
           git config --global user.name "Section 11 Bot"
           git config --global user.email "bot@section11.ai"
           git add .
-          git commit -m "Update training history" || exit 0
+          git commit -m "Sincronización historial" || exit 0
           git push
