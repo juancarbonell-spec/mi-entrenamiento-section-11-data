@@ -2,46 +2,41 @@ name: Sync Health Data to Intervals.icu
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *' # Se ejecuta cada 6 horas
+  workflow_dispatch:      # Te permite darle al botón de "Run workflow" tú mismo
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    env:
-      # 1. Soluciona el aviso de deprecación de Node.js 20
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
-      # 2. Descarga tu repositorio de datos
+      # 1. Descarga tu repositorio de datos
       - name: Checkout your repo
         uses: actions/checkout@v4
 
-      # 3. Descarga la herramienta de sincronización en una subcarpeta
-      - name: Checkout sync tool repository
+      # 2. Descarga la herramienta de sincronización en la carpeta section-11
         uses: actions/checkout@v4
         with:
           repository: CrankAddict/section-11
           path: section-11
 
-      # 4. Configura Python con la ruta de caché correcta
+      # 3. Configura Python de forma simple (sin caché conflictiva)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip'
-          # Especificamos dónde está el archivo para que no de error
-          cache-dependency-path: 'section-11/requirements.txt'
 
-      # 5. Instala las dependencias
+      # 4. Instala las dependencias si el archivo existe
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f section-11/requirements.txt ]; then 
             pip install -r section-11/requirements.txt
+          else
+            echo "No se encontró requirements.txt en section-11/, se continúa de todas formas."
           fi
 
-      # 6. Ejecuta la sincronización entrando en la carpeta
+      # 5. Ejecuta la sincronización
       - name: Run Sync Script
         env:
           INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
