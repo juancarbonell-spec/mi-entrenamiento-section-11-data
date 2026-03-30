@@ -27,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Sync Activities and Metrics from Intervals.icu
+      - name: Sync Activities from Intervals.icu
         run: |
           python << 'EOF'
           import requests, os, json
@@ -40,44 +40,35 @@ jobs:
               print("❌ ERROR: Faltan secrets en GitHub Settings")
               exit(1)
 
-          os.makedirs("data", exist_ok=True)
-
-          files_to_fetch = {
-              "activities_history.json": "/activities",
-              "sleep_history.json": "/sleep",
-              "spo2_history.json": "/spo2",
-              "hrv_history.json": "/hrv",
-              "respiration_history.json": "/respiration",
-              "steps_history.json": "/steps",
-              "heartrate_history.json": "/heartrate"
-          }
-
-          base_urls = [
-              f"https://intervals.icu/api/v1/athlete/{athlete_id}",
-              f"https://intervals.icu/api/v1/athlete/0"
+          # Definimos las URLs a probar
+          urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
+              f"https://intervals.icu/api/v1/athlete/0/activities"
           ]
+          
+          params = {"oldest": (datetime.now()-timedelta(days=365)).strftime("%Y-%m-%d")}
+          activities = None
 
-          for fname, endpoint in files_to_fetch.items():
-              data = None
-              for base in base_urls:
-                  url = f"{base}{endpoint}"
-                  params = {"oldest": (datetime.now()-timedelta(days=365)).strftime("%Y-%m-%d")}
-                  try:
-                      r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
-                      if r.status_code == 200:
-                          data = r.json()
-                          print(f"✅ {fname} obtenido de {url} ({len(data)} elementos)")
-                          break
-                      else:
-                          print(f"⚠️ Fallo en {url}: {r.status_code} {r.text[:100]}")
-                  except Exception as e:
-                      print(f"❌ Error conexión {url}: {e}")
-              if data:
-                  with open(f"data/{fname}", "w", encoding="utf-8") as f:
-                      json.dump(data, f, indent=2, ensure_ascii=False)
-              else:
-                  print(f"❌ No se pudo obtener {fname}")
+          for url in urls:
+              print(f"Probando sincronización en: {url}...")
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      activities = r.json()
+                      print(f"✅ ÉXITO: {len(activities)} actividades obtenidas.")
+                      break
+                  else:
+                      print(f"⚠️ Fallo en {url}: {r.status_code} {r.text[:100]}")
+              except Exception as e:
+                  print(f"❌ Error de conexión: {e}")
 
+          if not activities:
+              print("❌ No se pudo sincronizar con ninguna URL. Revisa tu API Key.")
+              exit(1)
+
+          os.makedirs("data", exist_ok=True)
+          with open("data/activities_history.json", "w", encoding="utf-8") as f:
+              json.dump(activities, f, indent=2, ensure_ascii=False)
           EOF
 
       - name: Analyze Performance and Generate Dossier
@@ -86,6 +77,7 @@ jobs:
           import os, json
           from datetime import datetime, timedelta
 
+          # Configuración de Zonas
           Z4_START, Z5_START = 148, 158
 
           if not os.path.exists("data/activities_history.json"):
@@ -110,6 +102,7 @@ jobs:
               t_h = (a.get("moving_time", 0)) / 3600
               hr = a.get("average_heartrate", 0)
               vvo2max = d_km / t_h if t_h > 0 else 0
+              # Economía: Metros por latido total (Distancia / (HR * Minutos))
               economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
               return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
 
@@ -129,6 +122,7 @@ jobs:
           with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
               f.write(dossier)
 
+          # Plan simple
           plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
           with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
               f.write(plan)
@@ -138,6 +132,6 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/*.json
-          git commit -m "Update training and metrics data [skip ci]" || echo "No changes"
+          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json
+          git commit -m "Update training data [skip ci]" || echo "No changes"
           git push
