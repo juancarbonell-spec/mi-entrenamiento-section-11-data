@@ -2,8 +2,8 @@ name: Intervals.icu Sync
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # Se ejecuta cada 15 minutos
-  workflow_dispatch: # Permite ejecutarlo manualmente
+    - cron: '*/15 * * * *' 
+  workflow_dispatch: 
 
 jobs:
   sync:
@@ -11,24 +11,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/python-setup@v5
         with:
           python-version: '3.10'
       - name: Install dependencies
         run: pip install requests
-      - name: Sync Data
+
+      - name: Sync Data (Download 30 Activities)
         env:
           ID: ${{ secrets.INTERVALS_ICU_ID }}
           KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
         run: |
-          # Aquí se ejecutará el script de Section 11 para bajar tus datos
-          # Por ahora, estamos preparando la estructura de carpetas
-          mkdir -p data
-          echo "Sincronización configurada correctamente" > data/status.txt
+          python -c "
+          import requests, os, json
+          
+          # Limpiamos el ID de la 'i' si existe para que la URL sea válida
+          athlete_id = ''.join(filter(str.isdigit, os.environ['ID']))
+          api_key = os.environ['KEY']
+          
+          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
+          response = requests.get(url, auth=('API_KEY', api_key), params={'limit': 30})
+          
+          if response.status_code == 200:
+              os.makedirs('data', exist_ok=True)
+              with open('data/activities_history.json', 'w') as f:
+                  json.dump(response.json(), f, indent=2)
+              print('Datos descargados correctamente')
+          else:
+              print(f'Error: {response.status_code}')
+              exit(1)
+          "
+
       - name: Commit and Push
         run: |
           git config --global user.name "Section 11 Bot"
           git config --global user.email "bot@section11.ai"
           git add .
-          git commit -m "Update training data" || exit 0
+          git commit -m "Update training data with actual activities" || exit 0
           git push
