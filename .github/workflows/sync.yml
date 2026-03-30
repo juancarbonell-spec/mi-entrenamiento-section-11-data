@@ -1,51 +1,69 @@
-- name: Sync Data
-      env:
-        INTERVALS_ID: ${{ secrets.INTERVALS_ICU_ID }}
-        INTERVALS_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
-      run: |
-        python -c "
-        import requests, os, json, base64
-        from datetime import datetime, timedelta
+name: Sync Intervals Data
 
-        # 1. Limpieza estricta de variables de entorno
-        raw_id = os.environ.get('INTERVALS_ID', '')
-        athlete_id = ''.join(filter(str.isdigit, raw_id))
-        api_key = os.environ.get('INTERVALS_KEY', '').strip()
+on:
+  schedule:
+    - cron: '0 0 * * *' # Se ejecuta cada medianoche
+  workflow_dispatch:   # Permite ejecutarlo manualmente con un botón
 
-        if not athlete_id or not api_key:
-            print('❌ ERROR: INTERVALS_ICU_ID o API_KEY no configurados en Secrets.')
-            exit(1)
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-        # 2. Formateo de Autenticación (Standard Basic Auth)
-        # El usuario es SIEMPRE la cadena literal 'API_KEY'
-        user_pass = f'API_KEY:{api_key}'
-        encoded_u_p = base64.b64encode(user_pass.encode('utf-8')).decode('utf-8')
-        
-        headers = {
-            'Authorization': f'Basic {encoded_u_p}',
-            'Accept': 'application/json'
-        }
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
 
-        # 3. Petición al API
-        # Nota: Usamos la URL base sin /athlete/ si el ID ya es el del atleta
-        url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
-        oldest = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-        
-        print(f'Conectando con Atleta ID: {athlete_id}...')
-        
-        try:
-            response = requests.get(url, headers=headers, params={'oldest': oldest})
-            
-            if response.status_code == 200:
-                os.makedirs('data', exist_ok=True)
-                with open('data/activities_history.json', 'w') as f:
-                    json.dump(response.json(), f, indent=2)
-                print('✅ ¡Sincronización exitosa! Archivo guardado en data/activities_history.json')
-            else:
-                print(f'❌ Error de Intervals.icu: {response.status_code}')
-                print(f'Respuesta: {response.text}')
-                exit(1)
-        except Exception as e:
-            print(f'❌ Error de red/sistema: {e}')
-            exit(1)
-        "
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Sync Data
+        env:
+          INTERVALS_ID: ${{ secrets.INTERVALS_ICU_ID }}
+          INTERVALS_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+        run: |
+          python -c "
+          import requests, os, json, base64
+          from datetime import datetime, timedelta
+
+          # Limpieza de variables
+          athlete_id = ''.join(filter(str.isdigit, os.environ.get('INTERVALS_ID', '')))
+          api_key = os.environ.get('INTERVALS_KEY', '').strip()
+
+          if not athlete_id or not api_key:
+              print('❌ Error: Faltan los Secrets en GitHub Settings')
+              exit(1)
+
+          # Autenticación
+          auth_str = f'API_KEY:{api_key}'
+          encoded_auth = base64.b64encode(auth_str.encode()).decode()
+          headers = {'Authorization': f'Basic {encoded_auth}', 'Accept': 'application/json'}
+
+          # Petición
+          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/activities'
+          params = {'oldest': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')}
+
+          print(f'Conectando a Intervals (ID: {athlete_id})...')
+          r = requests.get(url, headers=headers, params=params)
+
+          if r.status_code == 200:
+              os.makedirs('data', exist_ok=True)
+              with open('data/activities_history.json', 'w') as f:
+                  json.dump(r.json(), f, indent=2)
+              print('✅ Sincronización completa.')
+          else:
+              print(f'❌ Error {r.status_code}: {r.text}')
+              exit(1)
+          "
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add data/activities_history.json
+          git commit -m "Update activities data" || exit 0
+          git push
