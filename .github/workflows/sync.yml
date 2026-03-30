@@ -5,29 +5,28 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     
     steps:
-      # Paso 1: Tu repositorio
       - name: Checkout your repo
         uses: actions/checkout@v4
 
-      # Paso 2: El repositorio de la herramienta (IMPORTANTE el guion al principio)
       - name: Checkout sync tool repository
         uses: actions/checkout@v4
         with:
           repository: CrankAddict/section-11
           path: section-11
 
-      # Paso 3: Configurar Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # Paso 4: Instalar dependencias
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -35,11 +34,23 @@ jobs:
             pip install -r section-11/requirements.txt
           fi
 
-      # Paso 5: Ejecutar la sincronización
       - name: Run Sync Script
         env:
           INTERVALS_API_KEY: ${{ secrets.INTERVALS_API_KEY }}
           INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
         run: |
+          # 1. Listamos los archivos para ver qué hay realmente (esto saldrá en el log)
+          echo "Contenido de la carpeta section-11:"
+          ls -R section-11
+          
+          # 2. Intentamos ejecutar el script principal. 
+          # Si no es main.py, cámbialo por el nombre que veas en el paso anterior.
           cd section-11
-          python main.py
+          if [ -f "main.py" ]; then
+            python main.py
+          elif [ -f "sync.py" ]; then
+            python sync.py
+          else
+            echo "ERROR: No se encuentra main.py ni sync.py. Revisa el listado de arriba."
+            exit 1
+          fi
