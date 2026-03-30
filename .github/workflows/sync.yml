@@ -40,7 +40,7 @@ jobs:
               print("❌ Faltan secrets INTERVALS")
               exit(1)
 
-          url = f"https://intervals.icu/api/v1/athlete/0/activities"
+          url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities"
           params = {"oldest": (datetime.now()-timedelta(days=365)).strftime("%Y-%m-%d")}
 
           r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
@@ -53,17 +53,8 @@ jobs:
           file_path = "data/activities_history.json"
           with open(file_path,"w",encoding="utf-8") as f:
               json.dump(activities,f,indent=2,ensure_ascii=False)
-          print(f"✅ {len(activities)} actividades sincronizadas y guardadas en {file_path}")
+          print(f"✅ {len(activities)} actividades sincronizadas")
           EOF
-
-      - name: Verificar contenido de data/
-        run: ls -R data/
-
-      - name: Subir JSON de actividades como artefacto
-        uses: actions/upload-artifact@v4
-        with:
-          name: activities_data
-          path: data/activities_history.json
 
       - name: Generar dossier y plan avanzado
         run: |
@@ -71,16 +62,16 @@ jobs:
           import os, json
           from datetime import datetime, timedelta
 
-          # Tus zonas de FC
           Z4, Z5 = 148, 158
-
           def sec2min(s): return s/60 if s else 0
 
-          # Cargar actividades
+          if not os.path.exists("data/activities_history.json"):
+              print("Archivo no encontrado")
+              exit(1)
+
           with open("data/activities_history.json", "r", encoding="utf-8") as f:
               activities = json.load(f)
 
-          # Filtrar solo carreras válidas
           runs = sorted([a for a in activities if a.get("type")=="Run"], key=lambda x: x.get("start_date",""))
           valid_runs = [r for r in runs if r.get("distance",0)/1000 >= 1 and sec2min(r.get("moving_time",0)) >= 10]
 
@@ -91,92 +82,41 @@ jobs:
           last = valid_runs[-1]
           prev = valid_runs[-2] if len(valid_runs)>1 else last
 
-          # Función de métricas básicas y avanzadas
           def analyze_run(a):
               d_km = a.get("distance",0)/1000
               t_min = sec2min(a.get("moving_time",0))
-              pace = t_min/d_km if d_km>0 else 0
               hr = a.get("average_heartrate",0)
-
-              # Ritmo a 160 ppm aproximado (fallback simple si no hay heartrate_data)
-              hr_array = a.get("heartrate_data", [])  # opcional: lista de dicts {'hr':..., 'pace':...}
-              if hr_array:
-                  relevant = [r['pace'] for r in hr_array if 158 <= r['hr'] <= 162]
-                  pace_160 = sum(relevant)/len(relevant) if relevant else pace
-              else:
-                  pace_160 = pace
-
-              # vVO2max aproximada (km/h)
+              pace = t_min/d_km if d_km>0 else 0
               vvo2max = d_km / (t_min/60) if t_min>0 else 0
-
-              # Minutos en Z4/Z5 exactos
-              time_z4 = sum(1 for r in hr_array if Z4 <= r['hr'] < Z5) if hr_array else 0
-              time_z5 = sum(1 for r in hr_array if r['hr'] >= Z5) if hr_array else 0
-
-              # Desacople aeróbico (% aumento de FC a lo largo de la carrera)
-              if hr_array and len(hr_array) > 1:
-                  fc_start = hr_array[0]['hr']
-                  fc_end = hr_array[-1]['hr']
-                  decoupling = ((fc_end - fc_start)/fc_start)*100 if fc_start>0 else 0
-              else:
-                  decoupling = 0
-
-              # Economía de carrera (metros/latido)
               ec = (d_km*1000)/hr if hr>0 else 0
+              return {"pace": pace, "hr": hr, "vvo2max": vvo2max, "economy": ec}
 
-              return {
-                  "pace": pace,
-                  "hr": hr,
-                  "pace_160": pace_160,
-                  "vvo2max": vvo2max,
-                  "time_z4": time_z4,
-                  "time_z5": time_z5,
-                  "decoupling": decoupling,
-                  "economy": ec
-              }
+          m_l = analyze_run(last)
+          m_p = analyze_run(prev)
+          status = "MEJORA" if m_l['vvo2max'] >= m_p['vvo2max'] else "ESTABLE"
 
-          metrics_last = analyze_run(last)
-          metrics_prev = analyze_run(prev)
-
-          status = "MEJORA clara" if metrics_last['hr'] < metrics_prev['hr'] and metrics_last['pace'] <= metrics_prev['pace'] else "SIN mejora clara"
-
-          # Generar dossier avanzado
           dossier = (
               "# ATHLETE DOSSIER V7 AVANZADO\n\n"
               f"Última actividad: {last.get('start_date')}\n"
               f"Distancia: {last.get('distance',0)/1000:.2f} km\n"
-              f"FC media: {metrics_last['hr']:.0f}\n"
-              f"Ritmo medio: {metrics_last['pace']:.2f} min/km\n"
-              f"Pace a 160 ppm: {metrics_last['pace_160']:.2f} min/km\n"
-              f"vVO2max estimada: {metrics_last['vvo2max']:.2f} km/h\n"
-              f"Minutos en Z4: {metrics_last['time_z4']}\n"
-              f"Minutos en Z5: {metrics_last['time_z5']}\n"
-              f"Desacople aeróbico: {metrics_last['decoupling']:.2f}%\n"
-              f"Economía de carrera: {metrics_last['economy']:.2f} m/latido\n"
-              f"Comparación con anterior: {status}\n"
+              f"vVO2max estimada: {m_l['vvo2max']:.2f} km/h\n"
+              f"Economía: {m_l['economy']:.2f} m/latido\n"
+              f"Estado: {status}\n"
           )
 
           with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
               f.write(dossier)
-          print("✅ Dossier avanzado generado")
 
-          # Plan semanal con días correctos según zona horaria
-          today = datetime.now().astimezone()
-          plan = []
-          for i in range(7):
-              day = today + timedelta(days=i)
-              plan.append(f"- {day.strftime('%A')}: Rodaje Z2 45-60min")
-
+          today = datetime.now()
+          plan = [f"- {(today + timedelta(days=i)).strftime('%A')}: Rodaje Z2" for i in range(7)]
           with open("TRAINING_PLAN.md","w", encoding="utf-8") as f:
-              f.write("# PLAN SEMANAL SIMPLE V7\n\n")
-              f.write("\n".join(plan))
-          print("✅ Plan semanal V7 generado")
+              f.write("# PLAN SEMANAL\n\n" + "\n".join(plan))
           EOF
 
-          - name: Commit and Push changes
+      - name: Commit and Push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json
-          git commit -m "Update training data and dossier [skip ci]" || echo "No changes to commit"
+          git commit -m "Update training data [skip ci]" || echo "No changes"
           git push
