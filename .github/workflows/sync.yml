@@ -76,19 +76,24 @@ jobs:
 
           # ===== DOWNLOAD WELLNESS =====
           print("\n💪 Descargando WELLNESS (sleep, HRV, steps, weight, etc)...")
-          wellness_url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/wellness"
+          wellness_urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/wellness",
+              f"https://intervals.icu/api/v1/athlete/0/wellness"
+          ]
           
           wellness = None
-          print(f"  Intentando: {wellness_url}")
-          try:
-              r = requests.get(wellness_url, auth=("API_KEY", api_key), params=params, timeout=30)
-              if r.status_code == 200:
-                  wellness = r.json()
-                  print(f"✅ WELLNESS: {len(wellness)} registros obtenidos")
-              else:
-                  print(f"  ⚠️ Error {r.status_code}: {r.text[:200]}")
-          except Exception as e:
-              print(f"  ❌ Error: {e}")
+          for url in wellness_urls:
+              print(f"  Intentando: {url}")
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      wellness = r.json()
+                      print(f"✅ WELLNESS: {len(wellness)} registros obtenidos")
+                      break
+                  else:
+                      print(f"  ⚠️ Error {r.status_code}: {r.text[:200]}")
+              except Exception as e:
+                  print(f"  ❌ Error: {e}")
 
           if not wellness:
               print("⚠️ No se pudieron descargar datos wellness")
