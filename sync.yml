@@ -1,0 +1,33 @@
+# Sync Configuration for Activities and Wellness Data
+
+schedule:
+  cron: '0 6-15 * * *'
+
+jobs:
+  download_activities:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Activities
+        run: |
+          curl -o data/activities_history.json https://intervals.icu/api/v1/athlete/{athlete_id}/activities
+
+  download_wellness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Wellness Data
+        run: |
+          curl -o data/wellness_history.json https://intervals.icu/api/v1/athlete/{athlete_id}/wellness
+
+  analyze_performance:
+    runs-on: ubuntu-latest
+    needs: [download_activities, download_wellness]
+    steps:
+      - name: Generate Athlete Dossier
+        run: |
+          # Analysis logic goes here
+          echo 'Generating ATHLETE_DOSSIER.md...'
+
+      - name: Generate Training Plan
+        run: |
+          # Training plan generation logic goes here
+          echo 'Generating TRAINING_PLAN.md...'
