@@ -19924,10 +19924,10 @@
         "pMax": null
       }
     ],
-    "updated": "2026-03-30T01:02:44.260+00:00",
+    "updated": "2026-03-31T20:21:50.861+00:00",
     "weight": null,
     "restingHR": 41,
-    "hrv": 39.469135,
+    "hrv": 39.285713,
     "hrvSDNN": null,
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
@@ -19979,10 +19979,10 @@
         "pMax": null
       }
     ],
-    "updated": "2026-03-30T04:16:52.116+00:00",
+    "updated": "2026-03-31T20:21:55.557+00:00",
     "weight": 70.9,
     "restingHR": 42,
-    "hrv": 44.64706,
+    "hrv": 40.361702,
     "hrvSDNN": null,
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
@@ -20011,7 +20011,7 @@
     "vo2max": null,
     "comments": null,
     "steps": 2684,
-    "respiration": 12.753301,
+    "respiration": 13.17,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
@@ -20034,10 +20034,10 @@
         "pMax": null
       }
     ],
-    "updated": "2026-03-31T04:42:35.040+00:00",
+    "updated": "2026-03-31T20:21:56.061+00:00",
     "weight": null,
     "restingHR": 41,
-    "hrv": 45.4,
+    "hrv": 50.48077,
     "hrvSDNN": null,
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
@@ -20066,7 +20066,7 @@
     "vo2max": null,
     "comments": null,
     "steps": 3785,
-    "respiration": 10.610145,
+    "respiration": 10.802482,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
@@ -20089,7 +20089,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-03-31T18:20:36.199+00:00",
+    "updated": "2026-03-31T20:45:13.723+00:00",
     "weight": null,
     "restingHR": 42,
     "hrv": 40.225,
@@ -20121,7 +20121,7 @@
     "vo2max": 47.0,
     "comments": null,
     "steps": 15248,
-    "respiration": 12.125294,
+    "respiration": 12.917857,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
