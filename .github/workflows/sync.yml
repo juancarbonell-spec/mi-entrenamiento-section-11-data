@@ -2,7 +2,7 @@ name: Full Training Engine V8
 
 on:
   schedule:
-    - cron: '0 6-15 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
