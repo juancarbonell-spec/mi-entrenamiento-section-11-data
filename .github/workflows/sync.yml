@@ -1,134 +1,36 @@
-name: Full Training Engine V7
+name: Sync
 
 on:
   schedule:
-    - cron: '0 10 * * *'
-  workflow_dispatch:
+    - cron: '0 6-15 * * *'
 
 jobs:
-  sync-and-analyze:
+  download:
     runs-on: ubuntu-latest
-    env:
-      INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
-      INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
+      - name: Download Metrics
         run: |
-          python -m pip install --upgrade pip
-          pip install requests
+          curl -o data/activities.json https://intervals.icu/api/activities
+          curl -o data/sleep.json https://intervals.icu/api/sleep
+          curl -o data/spo2.json https://intervals.icu/api/spo2
+          curl -o data/hrv.json https://intervals.icu/api/hrv
+          curl -o data/respiration.json https://intervals.icu/api/respiration
+          curl -o data/steps.json https://intervals.icu/api/steps
+          curl -o data/heartrate.json https://intervals.icu/api/heartrate
+          curl -o data/peso.json https://intervals.icu/api/peso
 
-      - name: Sync Activities from Intervals.icu
+  analyze:
+    runs-on: ubuntu-latest
+    needs: download
+    steps:
+      - name: Analyze Data
         run: |
-          python << 'EOF'
-          import requests, os, json
-          from datetime import datetime, timedelta
+          python analyze.py
 
-          athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
-          api_key = os.environ.get("INTERVALS_API_KEY","").strip()
-
-          if not athlete_id or not api_key:
-              print("❌ ERROR: Faltan secrets en GitHub Settings")
-              exit(1)
-
-          os.makedirs("data", exist_ok=True)
-
-          urls = [
-              f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
-              f"https://intervals.icu/api/v1/athlete/0/activities"
-          ]
-          
-          params = {"oldest": (datetime.now()-timedelta(days=365)).strftime("%Y-%m-%d")}
-          activities = None
-
-          for url in urls:
-              print(f"Probando sincronización en: {url}...")
-              try:
-                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
-                  if r.status_code == 200:
-                      activities = r.json()
-                      print(f"✅ ÉXITO: {len(activities)} actividades obtenidas.")
-                      break
-                  else:
-                      print(f"⚠️ Fallo en {url}: {r.status_code} {r.text[:100]}")
-              except Exception as e:
-                  print(f"❌ Error de conexión: {e}")
-
-          if not activities:
-              print("❌ No se pudo sincronizar con ninguna URL. Revisa tu API Key.")
-              exit(1)
-
-          with open("data/activities_history.json", "w", encoding="utf-8") as f:
-              json.dump(activities, f, indent=2, ensure_ascii=False)
-          EOF
-
-      - name: Analyze Performance and Generate Dossier
+  generate_dossier:
+    runs-on: ubuntu-latest
+    needs: analyze
+    steps:
+      - name: Generate Dossier
         run: |
-          python << 'EOF'
-          import os, json
-          from datetime import datetime, timedelta
-
-          Z4_START, Z5_START = 148, 158
-
-          if not os.path.exists("data/activities_history.json"):
-              print("Archivo de datos no encontrado.")
-              exit(1)
-
-          with open("data/activities_history.json", "r", encoding="utf-8") as f:
-              activities = json.load(f)
-
-          runs = sorted([a for a in activities if a.get("type")=="Run"], key=lambda x: x.get("start_date",""))
-          valid_runs = [r for r in runs if r.get("distance", 0) > 1000]
-
-          if not valid_runs:
-              print("No hay carreras para analizar.")
-              exit(0)
-
-          last = valid_runs[-1]
-          prev = valid_runs[-2] if len(valid_runs) > 1 else last
-
-          def get_metrics(a):
-              d_km = a.get("distance", 0) / 1000
-              t_h = (a.get("moving_time", 0)) / 3600
-              hr = a.get("average_heartrate", 0)
-              vvo2max = d_km / t_h if t_h > 0 else 0
-              economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
-              return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
-
-          m_l = get_metrics(last)
-          m_p = get_metrics(prev)
-
-          dossier = (
-              f"# ATHLETE DOSSIER V7\n\n"
-              f"**Última Carrera:** {last.get('start_date')[:10]}\n"
-              f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
-              f"- **Distancia:** {m_l['dist']:.2f} km\n"
-              f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
-              f"- **Economía de carrera:** {m_l['ec']:.2f} m/latido\n\n"
-              f"**Progreso:** {'📈 Mejora' if m_l['v'] >= m_p['v'] else '📉 Estable'}\n"
-          )
-
-          with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
-              f.write(dossier)
-
-          plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
-          with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
-              f.write(plan)
-          EOF
-
-      - name: Push results to Repository
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json
-          git commit -m "Update activities and training data [skip ci]" || echo "No changes"
-          git push
+          python generate_dossier.py
