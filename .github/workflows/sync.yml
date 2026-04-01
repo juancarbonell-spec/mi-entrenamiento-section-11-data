@@ -8,6 +8,8 @@ on:
 jobs:
   sync-and-analyze:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
       INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
