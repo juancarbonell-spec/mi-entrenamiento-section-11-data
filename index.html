@@ -3,88 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Entrenamiento - Juan</title>
+    <title>Actividades de Juan</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
-        h1 { text-align: center; color: #1a73e8; margin-bottom: 30px; }
-        #activities-container { max-width: 900px; margin: 0 auto; }
-        .card { background: white; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 25px; display: flex; overflow: hidden; transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
-        .info { flex: 1; padding: 20px; display: flex; flex-direction: column; justify-content: center; }
-        .info h2 { margin: 0 0 10px 0; font-size: 1.25rem; color: #1a73e8; text-transform: capitalize; }
-        .date { color: #666; font-size: 0.9rem; margin-bottom: 15px; }
-        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .stat-item { background: #f8f9fa; padding: 8px; border-radius: 8px; text-align: center; }
-        .stat-label { display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; }
-        .stat-value { font-weight: bold; font-size: 1rem; color: #222; }
-        .map-box { width: 350px; height: 250px; background: #e0e0e0; position: relative; }
-        @media (max-width: 768px) { .card { flex-direction: column; } .map-box { width: 100%; height: 200px; } }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 500px; margin: 0 auto; background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .header { padding: 15px; border-bottom: 1px solid #eee; }
+        .header h1 { margin: 0; font-size: 18px; color: #333; }
+        .header p { margin: 5px 0 0; font-size: 14px; color: #777; }
+        
+        .activity-card { display: flex; padding: 12px; border-bottom: 1px solid #eee; transition: background 0.2s; }
+        .activity-card:last-child { border-bottom: none; }
+        
+        .map-thumb { width: 80px; height: 80px; border-radius: 4px; background: #eee; flex-shrink: 0; overflow: hidden; position: relative; }
+        .map-instance { width: 100%; height: 100%; }
+        
+        .activity-info { margin-left: 15px; flex-grow: 1; }
+        .activity-name { margin: 0; font-size: 15px; color: #007fb8; text-decoration: none; font-weight: 500; cursor: pointer; }
+        .activity-stats { margin: 4px 0; font-size: 13px; color: #555; display: flex; gap: 10px; }
+        .activity-date { margin: 0; font-size: 12px; color: #999; text-transform: lowercase; }
+        
+        .no-gps { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 10px; color: #aaa; text-align: center; padding: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>Mis 10 Últimas Actividades</h1>
-    <div id="activities-container">Cargando tus datos de entrenamiento...</div>
+    <div class="container">
+        <div class="header">
+            <h1>Juan C</h1>
+            <p>Últimas carreras</p>
+        </div>
+        <div id="activities-list"></div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
+        const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
 
-        async function init() {
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            return [h, m, s].map(v => v < 10 ? "0" + v : v).filter((v,i) => v !== "00" || i > 0).join(":");
+        }
+
+        async function loadData() {
             try {
-                const res = await fetch(URL);
-                const data = await res.json();
+                const response = await fetch(JSON_URL);
+                const data = await response.json();
                 
-                // Los datos están en un array. Ordenamos por fecha descendente.
-                const activities = data.sort((a, b) => new Date(b.start_time) - new Date(a.start_time)).slice(0, 10);
+                // Ordenar por fecha (start_date)
+                const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 10);
                 
-                const container = document.getElementById('activities-container');
-                container.innerHTML = '';
+                const list = document.getElementById('activities-list');
+                list.innerHTML = '';
 
-                activities.forEach((act, i) => {
-                    const dateObj = new Date(act.start_time);
-                    const formattedDate = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                sorted.forEach((act, i) => {
+                    const date = new Date(act.start_date);
+                    const dateStr = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     
-                    const distKm = (act.distance_meters / 1000).toFixed(2);
-                    const durationMin = Math.floor(act.duration_seconds / 60);
-                    const avgHR = act.average_heart_rate || '--';
+                    const dist = (act.distance / 1000).toFixed(1).replace('.', ',');
+                    const time = formatDuration(act.moving_time);
+                    const ele = act.total_elevation_gain ? Math.round(act.total_elevation_gain) + ' m' : '--';
 
                     const card = document.createElement('div');
-                    card.className = 'card';
+                    card.className = 'activity-card';
                     card.innerHTML = `
-                        <div class="info">
-                            <h2>${act.type || 'Actividad'}</h2>
-                            <div class="date">${formattedDate}</div>
-                            <div class="stats">
-                                <div class="stat-item"><span class="stat-label">Distancia</span><span class="stat-value">${distKm} km</span></div>
-                                <div class="stat-item"><span class="stat-label">Duración</span><span class="stat-value">${durationMin} min</span></div>
-                                <div class="stat-item"><span class="stat-label">FC Media</span><span class="stat-value">${avgHR} bpm</span></div>
-                                <div class="stat-item"><span class="stat-label">Calorías</span><span class="stat-value">${act.calories || '--'}</span></div>
+                        <div class="map-thumb" id="map-${i}"></div>
+                        <div class="activity-info">
+                            <h2 class="activity-name">${act.name || act.type}</h2>
+                            <div class="activity-stats">
+                                <span>${dist} km</span>
+                                <span>${time}</span>
+                                <span>${ele}</span>
                             </div>
+                            <p class="activity-date">${dateStr}</p>
                         </div>
-                        <div id="map-${i}" class="map-box"></div>
                     `;
-                    container.appendChild(card);
+                    list.appendChild(card);
 
-                    // Renderizar mapa si hay coordenadas
-                    // Ajuste: Tus datos usan 'map' -> 'summary_polyline' o similar
-                    const polylineData = act.map?.summary_polyline || act.polyline; 
-                    
-                    if (polylineData) {
-                        const map = L.map(`map-${i}`, { zoomControl: false, attributionControl: false });
+                    // Buscar polylines en campos comunes (map.summary_polyline o polyline)
+                    const pLine = (act.map && act.map.summary_polyline) || act.polyline || act.summary_polyline;
+
+                    if (pLine) {
+                        const map = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false });
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                         try {
-                            const coords = decodePolyline(polylineData);
-                            const polyline = L.polyline(coords, {color: '#ff4400', weight: 4}).addTo(map);
-                            map.fitBounds(polyline.getBounds(), {padding: [10, 10]});
-                        } catch(e) { console.error("Error mapa", e); }
+                            const coords = decodePolyline(pLine);
+                            const poly = L.polyline(coords, {color: '#ff4400', weight: 3}).addTo(map);
+                            map.fitBounds(poly.getBounds());
+                        } catch(e) { console.error(e); }
                     } else {
-                        document.getElementById(`map-${i}`).innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100%;color:#999'>Sin datos GPS</div>";
+                        document.getElementById(`map-${i}`).innerHTML = '<div class="no-gps">Sin datos GPS</div>';
                     }
                 });
-            } catch (err) {
-                document.getElementById('activities-container').innerHTML = "Error cargando el JSON. Revisa la consola.";
+            } catch (e) {
+                console.error(e);
+                document.getElementById('activities-list').innerHTML = '<p style="padding:20px">Error cargando actividades.</p>';
             }
         }
 
@@ -102,7 +117,7 @@
             return coordinates;
         }
 
-        init();
+        loadData();
     </script>
 </body>
 </html>
