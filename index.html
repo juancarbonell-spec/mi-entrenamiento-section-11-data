@@ -15,16 +15,17 @@
         .activity-card { display: flex; padding: 12px; border-bottom: 1px solid #eee; min-height: 95px; align-items: center; }
         .activity-card:last-child { border-bottom: none; }
         
-        .map-thumb { width: 90px; height: 90px; border-radius: 4px; background: #f2f2f2; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .map-thumb { width: 90px; height: 90px; border-radius: 4px; background: #ececec; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         
         .activity-info { margin-left: 15px; flex-grow: 1; }
-        .activity-name { margin: 0; font-size: 15px; color: #007fb8; font-weight: 600; text-transform: capitalize; }
+        .activity-name { margin: 0; font-size: 15px; color: #007fb8; font-weight: 600; }
         .activity-stats { margin: 4px 0; font-size: 13px; color: #444; font-weight: 500; }
         .activity-stats span { margin-right: 12px; }
         .activity-date { margin: 0; font-size: 12px; color: #888; text-transform: lowercase; }
         
-        .no-gps-text { font-size: 9px; color: #bbb; text-align: center; font-weight: bold; line-height: 1.2; }
-        .gym-icon { width: 45px; height: 45px; opacity: 0.2; }
+        .no-gps-text { font-size: 10px; color: #999; text-align: center; font-weight: bold; }
+        /* Estilo para que la mancuerna se vea bien */
+        .gym-icon { width: 50px; height: 50px; color: #666; opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -63,8 +64,10 @@
                     const date = new Date(act.start_date_local || act.start_date);
                     const dateStr = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     
+                    const nameLower = (act.name || "").toLowerCase();
                     const typeLower = (act.type || "").toLowerCase();
-                    const isStrength = typeLower.includes('weight') || typeLower.includes('fuerza') || typeLower.includes('strength');
+                    // Detectamos si es fuerza por nombre o por tipo
+                    const isStrength = typeLower.includes('weight') || typeLower.includes('fuerza') || typeLower.includes('strength') || nameLower.includes('fuerza');
                     
                     const distStr = (!isStrength && act.distance > 0) ? `<span>${(act.distance / 1000).toFixed(1).replace('.', ',')} km</span>` : '';
                     const timeStr = `<span>${formatDuration(act.moving_time || act.elapsed_time)}</span>`;
@@ -95,10 +98,10 @@
                     } else {
                         const thumb = document.getElementById(`map-${i}`);
                         if (isStrength) {
-                            // Insertamos icono de pesas (SVG) para fuerza
+                            // Nuevo icono de mancuerna más claro y visible
                             thumb.innerHTML = `
-                                <svg class="gym-icon" viewBox="0 0 24 24">
-                                    <path fill="currentColor" d="M22,12V10A2,2 0 0,0 20,8H19V4A2,2 0 0,0 17,2H15A2,2 0 0,0 13,4V8H11V4A2,2 0 0,0 9,2H7A2,2 0 0,0 5,4V8H4A2,2 0 0,0 2,10V12A2,2 0 0,0 4,14H5V18A2,2 0 0,0 7,20H9A2,2 0 0,0 11,18V14H13V18A2,2 0 0,0 15,20H17A2,2 0 0,0 19,18V14H20A2,2 0 0,0 22,14V12Z" />
+                                <svg class="gym-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6.5 6.5h11M6.5 17.5h11M12 6.5v11M3.5 10v4M20.5 10v4M2 12h2.5M19.5 12H22M5.5 5v14M18.5 5v14"/>
                                 </svg>`;
                         } else {
                             thumb.innerHTML = '<div class="no-gps-text">SIN<br>GPS</div>';
