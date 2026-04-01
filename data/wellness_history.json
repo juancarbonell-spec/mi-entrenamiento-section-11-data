@@ -20077,10 +20077,10 @@
   {
     "id": "2026-04-01",
     "ctl": 40.85526,
-    "atl": 30.543547,
+    "atl": 30.942913,
     "rampRate": -2.662346,
     "ctlLoad": 0.0,
-    "atlLoad": 0.0,
+    "atlLoad": 3.0,
     "sportInfo": [
       {
         "type": "Ride",
@@ -20089,7 +20089,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-01T05:20:49.812+00:00",
+    "updated": "2026-04-01T07:25:33.224+00:00",
     "weight": null,
     "restingHR": 43,
     "hrv": 42.894737,
@@ -20126,7 +20126,7 @@
     "protein": null,
     "fatTotal": null,
     "locked": null,
-    "tempWeight": false,
+    "tempWeight": true,
     "tempRestingHR": false
   }
 ]
