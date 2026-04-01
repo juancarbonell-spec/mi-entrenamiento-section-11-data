@@ -53,7 +53,6 @@
             try {
                 const response = await fetch(JSON_URL);
                 const data = await response.json();
-                // Ordenamos por fecha de más reciente a más antigua
                 const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 10);
                 
                 const list = document.getElementById('activities-list');
@@ -63,13 +62,12 @@
                     const date = new Date(act.start_date);
                     const dateStr = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     
-                    // Lógica de exclusión: No mostramos km si el tipo es Fuerza/Pesas
                     const typeLower = (act.type || "").toLowerCase();
                     const isStrength = typeLower.includes('weight') || typeLower.includes('fuerza') || typeLower.includes('strength');
                     
                     const distStr = (!isStrength && act.distance > 0) ? `<span>${(act.distance / 1000).toFixed(1).replace('.', ',')} km</span>` : '';
                     const timeStr = `<span>${formatDuration(act.moving_time || act.elapsed_time)}</span>`;
-                    const eleStr = (!isStrength && act.total_elevation_gain > 0) ? `<span>+${Math.round(act.total_elevation_gain)} m</span>` : '';
+                    const eleStr = (!isStrength && act.total_elevation_gain > 0) ? `<span>${Math.round(act.total_elevation_gain)} m</span>` : '';
 
                     const card = document.createElement('div');
                     card.className = 'activity-card';
@@ -83,8 +81,8 @@
                     `;
                     list.appendChild(card);
 
-                    // Buscar el dibujo del mapa (polyline)
-                    const poly = act.map?.summary_polyline || act.polyline || act.summary_polyline;
+                    // Búsqueda exhaustiva del campo del mapa
+                    const poly = act.map_polyline || (act.map && act.map.summary_polyline) || act.polyline || act.summary_polyline;
 
                     if (poly && poly.length > 5) {
                         const m = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false });
@@ -99,11 +97,10 @@
                     }
                 });
             } catch (e) {
-                document.getElementById('activities-list').innerHTML = '<p style="padding:20px">Error al cargar datos desde GitHub.</p>';
+                document.getElementById('activities-list').innerHTML = '<p style="padding:20px">Error al cargar datos.</p>';
             }
         }
 
-        // Función para convertir el código de texto en coordenadas de mapa
         function decode(str) {
             let index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, lat_change, lng_change;
             while (index < str.length) {
