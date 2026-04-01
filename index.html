@@ -3,122 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Actividades de Juan</title>
+    <title>Training - Juan Carbonell</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mapbox/polyline@1.1.1/src/polyline.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 10px; }
-        .container { max-width: 450px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { padding: 20px; border-bottom: 1px solid #eee; }
-        .header h1 { margin: 0; font-size: 20px; color: #333; font-weight: 800; }
-        .header p { margin: 2px 0 0; font-size: 13px; color: #888; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #f0f2f5; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-        .activity-card { display: flex; padding: 15px; border-bottom: 1px solid #f9f9f9; align-items: center; }
-        .activity-card:last-child { border-bottom: none; }
+        h1 { 
+            color: #1d1d1f; 
+            font-weight: 300; 
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
 
-        /* Cuadrado de la izquierda */
-        .map-box { width: 85px; height: 85px; border-radius: 12px; background: #f0f0f0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 1px solid #eee; }
-        
-        .activity-info { margin-left: 15px; flex-grow: 1; }
-        .activity-name { margin: 0; font-size: 16px; color: #007fb8; font-weight: 700; line-height: 1.2; }
-        .activity-stats { margin: 6px 0; font-size: 14px; color: #444; display: flex; gap: 10px; font-weight: 600; }
-        .activity-date { margin: 0; font-size: 12px; color: #999; text-transform: capitalize; }
+        /* FUERZA COLUMNA ÚNICA (ESTILO MÓVIL) */
+        #activities-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+            width: 100%;
+            max-width: 550px; /* Ancho ideal para lectura vertical */
+            margin: 0 auto; 
+        }
 
-        /* Iconos */
-        .icon-svg { width: 50px; height: 50px; fill: #222; } /* Mancuerna negra y sólida */
-        .map-placeholder { width: 100%; height: 100%; background: #e0e0e0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #aaa; font-size: 10px; font-weight: bold; }
+        .card { 
+            background: white; 
+            border-radius: 20px; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06); 
+            padding: 25px; 
+            transition: transform 0.2s;
+        }
+
+        .card-header { margin-bottom: 15px; }
+
+        .card-title { 
+            font-weight: bold; 
+            font-size: 1.3em; 
+            color: #fc4c02; /* Naranja Strava */
+            line-height: 1.2;
+        }
+
+        .card-date {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .stats { 
+            font-size: 1em; 
+            color: #444; 
+            margin-bottom: 15px; 
+            font-weight: 500;
+        }
+
+        .map-mini { 
+            height: 250px; 
+            width: 100%; 
+            border-radius: 15px; 
+            margin-top: 10px; 
+            cursor: pointer; 
+            background: #f8f9fa; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+        }
+
+        /* MANCUERNAS MÁS GRANDES */
+        .no-gps-img { 
+            width: 140px; 
+            height: 140px; 
+            opacity: 0.7; 
+        }
+
+        .zone-badge { 
+            display: inline-block; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 0.8em; 
+            margin-top: 10px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
+
+        .z4 { background: #ffe0b2; color: #e65100; border: 1px solid #ffcc80; }
+        .z5 { background: #ffcdd2; color: #b71c1c; border: 1px solid #ef9a9a; }
+
+        /* MODAL MAPA GRANDE */
+        #modal-map { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        #big-map { width: 90%; height: 80%; border-radius: 15px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h1>Juan C</h1>
-        <p>Entrenamientos recientes</p>
-    </div>
-    <div id="activities-list"></div>
+<h1>Mis Actividades</h1>
+
+<div id="activities-list">Sincronizando con Strava...</div>
+
+<div id="modal-map" onclick="this.style.display='none'">
+    <div id="big-map" onclick="event.stopPropagation()"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
+    // TUS CREDENCIALES
+    const CLIENT_ID = '94229';
+    const CLIENT_SECRET = '1ee16d3138e7094a3e6e0729c9f874485353539a';
+    const REFRESH_TOKEN = 'e788bea11b2b03b25051c26cc3914ebb61544f08';
 
-    function formatDuration(s) {
-        if (!s) return "0:00";
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = s % 60;
-        return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}` : `${m}:${sec.toString().padStart(2, '0')}`;
+    async function getAccessToken() {
+        const res = await fetch('https://www.strava.com/api/v3/oauth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
+                refresh_token: REFRESH_TOKEN,
+                grant_type: 'refresh_token'
+            })
+        });
+        const data = await res.json();
+        return data.access_token;
     }
 
-    async function loadData() {
+    async function init() {
         try {
-            const response = await fetch(JSON_URL);
-            const data = await response.json();
-            const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 30);
-            
-            const list = document.getElementById('activities-list');
-            list.innerHTML = '';
-
-            sorted.forEach((act, i) => {
-                const date = new Date(act.start_date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-                const type = (act.type || "").toLowerCase();
-                const isFuerza = type.includes('weight') || type.includes('fuerza') || (act.name || "").toLowerCase().includes('fuerza');
-
-                const card = document.createElement('div');
-                card.className = 'activity-card';
-                card.innerHTML = `
-                    <div class="map-box" id="map-${i}"></div>
-                    <div class="activity-info">
-                        <h2 class="activity-name">${act.name || act.type}</h2>
-                        <div class="activity-stats">
-                            ${!isFuerza && act.distance ? `<span>${(act.distance / 1000).toFixed(1).replace('.', ',')} km</span>` : ''}
-                            <span>${formatDuration(act.moving_time || act.elapsed_time)}</span>
-                        </div>
-                        <p class="activity-date">${date}</p>
-                    </div>`;
-                list.appendChild(card);
-
-                // Lógica de visualización en el cuadro
-                const poly = act.map_polyline || (act.map && act.map.summary_polyline);
-
-                if (poly) {
-                    // Si hay datos, dibujamos el mapa (Imagen estática simulada con Leaflet)
-                    const m = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false });
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
-                    const coords = decode(poly);
-                    const line = L.polyline(coords, {color: '#ff4400', weight: 4}).addTo(m);
-                    m.fitBounds(line.getBounds(), {padding: [5, 5]});
-                } else {
-                    const box = document.getElementById(`map-${i}`);
-                    if (isFuerza) {
-                        // MANCUERNA NEGRA Y SÓLIDA
-                        box.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M5,18V14H3V10H5V6H7V18H5M21,14V10H19V6H17V18H19V14H21M15,8V16H9V8H15M11,10V14H13V10H11Z"/></svg>`;
-                    } else {
-                        // Icono de mapa genérico si no hay ruta
-                        box.innerHTML = `<div class="map-placeholder">
-                            <svg width="30" height="30" viewBox="0 0 24 24" fill="#ccc"><path d="M20.5,3l-7.2,2.4L7,3L3.5,4.2C3.2,4.3,3,4.6,3,4.9v14.6c0,0.3,0.2,0.6,0.5,0.7l7,2.3l6.3-2.1l3.7,1.2c0.3,0.1,0.5-0.1,0.5-0.4V3.5C21,3.2,20.8,3,20.5,3z M15,19l-4,1.3V6.4l4-1.3V19z"/></svg>
-                            <span style="margin-top:5px">SIN RUTA</span>
-                        </div>`;
-                    }
-                }
+            const token = await getAccessToken();
+            const res = await fetch(`https://www.strava.com/api/v3/athlete/activities?per_page=30`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-        } catch (e) { console.error(e); }
+            const activities = await res.json();
+            render(activities);
+        } catch (e) {
+            document.getElementById('activities-list').innerText = "Error al conectar con Strava.";
+        }
     }
 
-    function decode(str) {
-        let index = 0, lat = 0, lng = 0, coords = [], shift, result, byte;
-        while (index < str.length) {
-            shift = 0; result = 0;
-            do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-            lat += ((result & 1) ? ~(result >> 1) : (result >> 1));
-            shift = 0; result = 0;
-            do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-            lng += ((result & 1) ? ~(result >> 1) : (result >> 1));
-            coords.push([lat / 1e5, lng / 1e5]);
-        }
-        return coords;
+    function render(activities) {
+        const list = document.getElementById('activities-list');
+        list.innerHTML = '';
+
+        activities.forEach((act, i) => {
+            const avgHR = act.average_heartrate || 0;
+            const distKm = act.distance / 1000;
+            const timeMin = (act.moving_time / 60).toFixed(0);
+            
+            // Si la distancia es 0 (pesas), no mostramos km
+            const displayDistance = distKm > 0 ? ` | ${distKm.toFixed(2)} km` : '';
+            
+            let zoneHtml = '';
+            if (avgHR >= 158) zoneHtml = '<span class="zone-badge z5">Zona 5</span>';
+            else if (avgHR >= 148) zoneHtml = '<span class="zone-badge z4">Zona 4</span>';
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            const hasGPS = act.map && act.map.summary_polyline;
+            const mapContent = hasGPS 
+                ? '' 
+                : `<img src="https://cdn-icons-png.flaticon.com/512/2548/2548537.png" class="no-gps-img" alt="Gimnasio">`;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${act.name}</div>
+                    <span class="card-date">${new Date(act.start_date_local).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                </div>
+                <div class="stats">
+                    ${act.type}${displayDistance} | ${timeMin} min
+                    <br>${zoneHtml}
+                </div>
+                <div id="map-${i}" class="map-mini">${mapContent}</div>
+            `;
+            list.appendChild(card);
+
+            if (hasGPS) {
+                renderMap(`map-${i}`, act.map.summary_polyline);
+            }
+        });
     }
-    loadData();
+
+    function renderMap(elementId, encodedPoly) {
+        const coords = polyline.decode(encodedPoly);
+        const map = L.map(elementId, {
+            zoomControl: false, 
+            attributionControl: false, 
+            dragging: false, 
+            touchZoom: false, 
+            scrollWheelZoom: false, 
+            doubleClickZoom: false
+        }).setView(coords[0], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const path = L.polyline(coords, {color: '#ff4d4d', weight: 4}).addTo(map);
+        map.fitBounds(path.getBounds());
+
+        document.getElementById(elementId).onclick = () => {
+            const modal = document.getElementById('modal-map');
+            modal.style.display = 'flex';
+            const bigMapDiv = document.getElementById('big-map');
+            
+            if (window.bigMapInstance) window.bigMapInstance.remove();
+            
+            window.bigMapInstance = L.map('big-map').setView(coords[0], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.bigMapInstance);
+            L.polyline(coords, {color: '#ff4d4d', weight: 6}).addTo(window.bigMapInstance);
+            window.bigMapInstance.fitBounds(path.getBounds());
+        };
+    }
+
+    init();
 </script>
 </body>
 </html>
