@@ -17724,10 +17724,10 @@
         "pMax": null
       }
     ],
-    "updated": "2026-03-29T06:34:44.339+00:00",
+    "updated": "2026-04-01T18:02:35.605+00:00",
     "weight": null,
     "restingHR": 40,
-    "hrv": 43.0,
+    "hrv": 34.2,
     "hrvSDNN": null,
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
@@ -17779,10 +17779,10 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-01T16:24:45.621+00:00",
+    "updated": "2026-04-01T18:02:41.171+00:00",
     "weight": null,
     "restingHR": 42,
-    "hrv": 40.74286,
+    "hrv": 41.62069,
     "hrvSDNN": null,
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
@@ -17811,7 +17811,7 @@
     "vo2max": null,
     "comments": null,
     "steps": 280,
-    "respiration": null,
+    "respiration": 13.185454,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
@@ -17834,7 +17834,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-01T16:25:00.134+00:00",
+    "updated": "2026-04-01T18:02:41.685+00:00",
     "weight": null,
     "restingHR": 39,
     "hrv": 43.50926,
@@ -17852,7 +17852,7 @@
     "mood": null,
     "motivation": null,
     "injury": null,
-    "spO2": null,
+    "spO2": 93.0,
     "systolic": null,
     "diastolic": null,
     "hydration": null,
@@ -17866,7 +17866,7 @@
     "vo2max": 47.0,
     "comments": null,
     "steps": 15596,
-    "respiration": 11.572,
+    "respiration": 13.726716,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
@@ -17889,10 +17889,10 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-01T16:25:00.836+00:00",
+    "updated": "2026-04-01T18:02:37.228+00:00",
     "weight": null,
     "restingHR": 41,
-    "hrv": 39.503876,
+    "hrv": 40.145832,
     "hrvSDNN": null,
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
@@ -20089,7 +20089,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-01T16:19:23.030+00:00",
+    "updated": "2026-04-01T17:59:01.789+00:00",
     "weight": null,
     "restingHR": 43,
     "hrv": 42.894737,
@@ -20120,8 +20120,8 @@
     "abdomen": null,
     "vo2max": null,
     "comments": null,
-    "steps": 2812,
-    "respiration": 9.833,
+    "steps": 4400,
+    "respiration": 8.093611,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
