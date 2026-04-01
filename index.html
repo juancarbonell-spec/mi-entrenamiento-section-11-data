@@ -6,24 +6,24 @@
     <title>Actividades de Juan</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 15px; color: #333; }
-        .container { max-width: 500px; margin: 0 auto; background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 480px; margin: 0 auto; background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .header { padding: 15px; border-bottom: 1px solid #eee; }
         .header h1 { margin: 0; font-size: 18px; color: #333; }
-        .header p { margin: 5px 0 0; font-size: 14px; color: #777; }
+        .header p { margin: 4px 0 0; font-size: 13px; color: #666; }
         
-        .activity-card { display: flex; padding: 12px; border-bottom: 1px solid #eee; transition: background 0.2s; }
+        .activity-card { display: flex; padding: 12px; border-bottom: 1px solid #eee; min-height: 90px; align-items: center; }
         .activity-card:last-child { border-bottom: none; }
         
-        .map-thumb { width: 80px; height: 80px; border-radius: 4px; background: #eee; flex-shrink: 0; overflow: hidden; position: relative; }
-        .map-instance { width: 100%; height: 100%; }
+        .map-thumb { width: 90px; height: 90px; border-radius: 4px; background: #f0f0f0; flex-shrink: 0; overflow: hidden; }
         
         .activity-info { margin-left: 15px; flex-grow: 1; }
-        .activity-name { margin: 0; font-size: 15px; color: #007fb8; text-decoration: none; font-weight: 500; cursor: pointer; }
-        .activity-stats { margin: 4px 0; font-size: 13px; color: #555; display: flex; gap: 10px; }
-        .activity-date { margin: 0; font-size: 12px; color: #999; text-transform: lowercase; }
+        .activity-name { margin: 0; font-size: 15px; color: #007fb8; font-weight: 600; text-transform: capitalize; }
+        .activity-stats { margin: 4px 0; font-size: 13px; color: #444; font-weight: 500; }
+        .activity-stats span { margin-right: 12px; }
+        .activity-date { margin: 0; font-size: 12px; color: #888; text-transform: lowercase; }
         
-        .no-gps { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 10px; color: #aaa; text-align: center; padding: 5px; }
+        .no-gps { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 9px; color: #bbb; text-align: center; font-weight: bold; background: #f2f2f2; line-height: 1.2; }
     </style>
 </head>
 <body>
@@ -31,7 +31,7 @@
     <div class="container">
         <div class="header">
             <h1>Juan C</h1>
-            <p>Últimas carreras</p>
+            <p>Últimas actividades de entrenamiento</p>
         </div>
         <div id="activities-list"></div>
     </div>
@@ -41,18 +41,19 @@
         const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
 
         function formatDuration(seconds) {
+            if (!seconds) return "--:--";
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             const s = seconds % 60;
-            return [h, m, s].map(v => v < 10 ? "0" + v : v).filter((v,i) => v !== "00" || i > 0).join(":");
+            if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${m}:${s.toString().padStart(2, '0')}`;
         }
 
         async function loadData() {
             try {
                 const response = await fetch(JSON_URL);
                 const data = await response.json();
-                
-                // Ordenar por fecha (start_date)
+                // Ordenamos por fecha de más reciente a más antigua
                 const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 10);
                 
                 const list = document.getElementById('activities-list');
@@ -62,9 +63,13 @@
                     const date = new Date(act.start_date);
                     const dateStr = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     
-                    const dist = (act.distance / 1000).toFixed(1).replace('.', ',');
-                    const time = formatDuration(act.moving_time);
-                    const ele = act.total_elevation_gain ? Math.round(act.total_elevation_gain) + ' m' : '--';
+                    // Lógica de exclusión: No mostramos km si el tipo es Fuerza/Pesas
+                    const typeLower = (act.type || "").toLowerCase();
+                    const isStrength = typeLower.includes('weight') || typeLower.includes('fuerza') || typeLower.includes('strength');
+                    
+                    const distStr = (!isStrength && act.distance > 0) ? `<span>${(act.distance / 1000).toFixed(1).replace('.', ',')} km</span>` : '';
+                    const timeStr = `<span>${formatDuration(act.moving_time || act.elapsed_time)}</span>`;
+                    const eleStr = (!isStrength && act.total_elevation_gain > 0) ? `<span>+${Math.round(act.total_elevation_gain)} m</span>` : '';
 
                     const card = document.createElement('div');
                     card.className = 'activity-card';
@@ -72,38 +77,34 @@
                         <div class="map-thumb" id="map-${i}"></div>
                         <div class="activity-info">
                             <h2 class="activity-name">${act.name || act.type}</h2>
-                            <div class="activity-stats">
-                                <span>${dist} km</span>
-                                <span>${time}</span>
-                                <span>${ele}</span>
-                            </div>
+                            <div class="activity-stats">${distStr}${timeStr}${eleStr}</div>
                             <p class="activity-date">${dateStr}</p>
                         </div>
                     `;
                     list.appendChild(card);
 
-                    // Buscar polylines en campos comunes (map.summary_polyline o polyline)
-                    const pLine = (act.map && act.map.summary_polyline) || act.polyline || act.summary_polyline;
+                    // Buscar el dibujo del mapa (polyline)
+                    const poly = act.map?.summary_polyline || act.polyline || act.summary_polyline;
 
-                    if (pLine) {
-                        const map = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false });
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    if (poly && poly.length > 5) {
+                        const m = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false });
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
                         try {
-                            const coords = decodePolyline(pLine);
-                            const poly = L.polyline(coords, {color: '#ff4400', weight: 3}).addTo(map);
-                            map.fitBounds(poly.getBounds());
-                        } catch(e) { console.error(e); }
+                            const coords = decode(poly);
+                            const line = L.polyline(coords, {color: '#ff4400', weight: 3, opacity: 0.8}).addTo(m);
+                            m.fitBounds(line.getBounds(), {padding: [5, 5]});
+                        } catch(e) { console.error("Error decodificando GPS", e); }
                     } else {
-                        document.getElementById(`map-${i}`).innerHTML = '<div class="no-gps">Sin datos GPS</div>';
+                        document.getElementById(`map-${i}`).innerHTML = '<div class="no-gps">SIN<br>GPS</div>';
                     }
                 });
             } catch (e) {
-                console.error(e);
-                document.getElementById('activities-list').innerHTML = '<p style="padding:20px">Error cargando actividades.</p>';
+                document.getElementById('activities-list').innerHTML = '<p style="padding:20px">Error al cargar datos desde GitHub.</p>';
             }
         }
 
-        function decodePolyline(str) {
+        // Función para convertir el código de texto en coordenadas de mapa
+        function decode(str) {
             let index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, lat_change, lng_change;
             while (index < str.length) {
                 byte = null; shift = 0; result = 0;
