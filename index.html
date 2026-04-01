@@ -1,1 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Últimas Actividades - Juan</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f9; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        .activity-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; padding: 15px; display: flex; flex-wrap: wrap; gap: 15px; }
+        .info { flex: 1; min-width: 250px; }
+        .info h2 { margin: 0 0 10px 0; color: #007bff; font-size: 1.2em; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em; }
+        .map-container { width: 300px; height: 200px; border-radius: 8px; overflow: hidden; background: #eee; }
+        @media (max-width: 600px) { .map-container { width: 100%; } }
+    </style>
+</head>
+<body>
 
+    <h1>Mis 10 Últimas Actividades</h1>
+    <div id="activities-container">Cargando actividades...</div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
+
+        async function loadActivities() {
+            try {
+                const response = await fetch(JSON_URL);
+                const data = await response.json();
+                
+                // Ordenar por fecha y coger las últimas 10
+                const last10 = data.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+                
+                const container = document.getElementById('activities-container');
+                container.innerHTML = '';
+
+                last10.forEach((act, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'activity-card';
+                    
+                    // Generar HTML de la tarjeta
+                    card.innerHTML = `
+                        <div class="info">
+                            <h2>${act.name || 'Actividad sin nombre'}</h2>
+                            <p><strong>Fecha:</strong> ${new Date(act.date).toLocaleDateString()}</p>
+                            <div class="stats">
+                                <div><strong>Distancia:</strong> ${(act.distance / 1000).toFixed(2)} km</div>
+                                <div><strong>Tiempo:</strong> ${(act.duration / 60).toFixed(1)} min</div>
+                                <div><strong>FC Media:</strong> ${act.average_hr || '--'} ppm</div>
+                                <div><strong>Calorías:</strong> ${act.calories || '--'} kcal</div>
+                            </div>
+                        </div>
+                        <div id="map-${index}" class="map-container"></div>
+                    `;
+                    
+                    container.appendChild(card);
+
+                    // Dibujar mapa si existen coordenadas (polyline)
+                    if (act.map_polyline) {
+                        const map = L.map(`map-${index}`, { zoomControl: false, attributionControl: false }).setView([0,0], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                        
+                        // Decodificar la línea (esto es una simplificación, asumiendo formato estándar)
+                        // Si tus datos usan coordenadas lat/lng directas, se mapean aquí:
+                        try {
+                            const coordinates = decodePolyline(act.map_polyline); 
+                            const polyline = L.polyline(coordinates, {color: 'red'}).addTo(map);
+                            map.fitBounds(polyline.getBounds());
+                        } catch(e) { 
+                            document.getElementById(`map-${index}`).innerHTML = "<p style='padding:70px 20px;text-align:center'>Mapa no disponible</p>";
+                        }
+                    } else {
+                        document.getElementById(`map-${index}`).innerHTML = "<p style='padding:70px 20px;text-align:center'>Sin datos GPS</p>";
+                    }
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('activities-container').innerText = 'Error al cargar los datos.';
+            }
+        }
+
+        // Función auxiliar para decodificar polylines de Strava/Garmin
+        function decodePolyline(encoded) {
+            let points = [];
+            let index = 0, len = encoded.length;
+            let lat = 0, lng = 0;
+            while (index < len) {
+                let b, shift = 0, result = 0;
+                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+                let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1)); lat += dlat;
+                shift = 0; result = 0;
+                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+                let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1)); lng += dlng;
+                points.push([lat / 1e5, lng / 1e5]);
+            }
+            return points;
+        }
+
+        loadActivities();
+    </script>
+</body>
+</html>
