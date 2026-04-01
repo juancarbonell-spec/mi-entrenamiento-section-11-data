@@ -1,238 +1,176 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training - Juan Carbonell</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mapbox/polyline@1.1.1/src/polyline.min.js"></script>
-    <style>
-        body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            background: #f0f2f5; 
-            margin: 0; 
-            padding: 20px; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+name: Full Training Engine V8
 
-        h1 { 
-            color: #1d1d1f; 
-            font-weight: 300; 
-            margin-bottom: 30px;
-            font-size: 2em;
-        }
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
-        /* FUERZA COLUMNA ÚNICA (ESTILO MÓVIL) */
-        #activities-list { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 25px; 
-            width: 100%;
-            max-width: 550px; /* Ancho ideal para lectura vertical */
-            margin: 0 auto; 
-        }
+jobs:
+  sync-and-analyze:
+    runs-on: ubuntu-latest
+    env:
+      INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+      INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-        .card { 
-            background: white; 
-            border-radius: 20px; 
-            box-shadow: 0 8px 16px rgba(0,0,0,0.06); 
-            padding: 25px; 
-            transition: transform 0.2s;
-        }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-        .card-header { margin-bottom: 15px; }
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-        .card-title { 
-            font-weight: bold; 
-            font-size: 1.3em; 
-            color: #fc4c02; /* Naranja Strava */
-            line-height: 1.2;
-        }
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
-        .card-date {
-            color: #888;
-            font-size: 0.9em;
-            margin-top: 4px;
-            display: block;
-        }
+      - name: Sync Activities and Wellness from Intervals.icu
+        run: |
+          python << 'EOF'
+          import requests, os, json
+          from datetime import datetime, timedelta
 
-        .stats { 
-            font-size: 1em; 
-            color: #444; 
-            margin-bottom: 15px; 
-            font-weight: 500;
-        }
+          athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
+          api_key = os.environ.get("INTERVALS_API_KEY","").strip()
 
-        .map-mini { 
-            height: 250px; 
-            width: 100%; 
-            border-radius: 15px; 
-            margin-top: 10px; 
-            cursor: pointer; 
-            background: #f8f9fa; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-        }
+          if not athlete_id or not api_key:
+              print("❌ ERROR: Faltan secrets en GitHub Settings")
+              exit(1)
 
-        /* MANCUERNAS MÁS GRANDES */
-        .no-gps-img { 
-            width: 140px; 
-            height: 140px; 
-            opacity: 0.7; 
-        }
+          os.makedirs("data", exist_ok=True)
 
-        .zone-badge { 
-            display: inline-block; 
-            padding: 4px 12px; 
-            border-radius: 20px; 
-            font-weight: bold; 
-            font-size: 0.8em; 
-            margin-top: 10px; 
-            text-transform: uppercase; 
-            letter-spacing: 0.5px;
-        }
+          # Calculate date range (last 365 days)
+          oldest = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+          newest = datetime.now().strftime("%Y-%m-%d")
+          params = {"oldest": oldest, "newest": newest}
 
-        .z4 { background: #ffe0b2; color: #e65100; border: 1px solid #ffcc80; }
-        .z5 { background: #ffcdd2; color: #b71c1c; border: 1px solid #ef9a9a; }
+          print(f"📊 Rango de fechas: {oldest} a {newest}")
 
-        /* MODAL MAPA GRANDE */
-        #modal-map { 
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); 
-            z-index: 1000; 
-            justify-content: center; 
-            align-items: center; 
-        }
-        #big-map { width: 90%; height: 80%; border-radius: 15px; }
-    </style>
-</head>
-<body>
+          # ===== DOWNLOAD ACTIVITIES =====
+          print("\n📍 Descargando ACTIVIDADES...")
+          activities_urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
+              f"https://intervals.icu/api/v1/athlete/0/activities"
+          ]
+          
+          activities = None
+          for url in activities_urls:
+              print(f"  Intentando: {url}")
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      activities = r.json()
+                      print(f"✅ ACTIVIDADES: {len(activities)} registros obtenidos")
+                      break
+                  else:
+                      print(f"  ⚠️ Error {r.status_code}")
+              except Exception as e:
+                  print(f"  ❌ Error: {e}")
 
-<h1>Mis Actividades</h1>
+          if not activities:
+              print("❌ No se pudieron descargar actividades")
+              activities = []
 
-<div id="activities-list">Sincronizando con Strava...</div>
+          # ===== DOWNLOAD WELLNESS =====
+          print("\n💪 Descargando WELLNESS (sleep, HRV, steps, weight, etc)...")
+          wellness_urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/wellness",
+              f"https://intervals.icu/api/v1/athlete/0/wellness"
+          ]
+          
+          wellness = None
+          for url in wellness_urls:
+              print(f"  Intentando: {url}")
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      wellness = r.json()
+                      print(f"✅ WELLNESS: {len(wellness)} registros obtenidos")
+                      break
+                  else:
+                      print(f"  ⚠️ Error {r.status_code}: {r.text[:200]}")
+              except Exception as e:
+                  print(f"  ❌ Error: {e}")
 
-<div id="modal-map" onclick="this.style.display='none'">
-    <div id="big-map" onclick="event.stopPropagation()"></div>
-</div>
+          if not wellness:
+              print("⚠️ No se pudieron descargar datos wellness")
+              wellness = []
 
-<script>
-    // TUS CREDENCIALES
-    const CLIENT_ID = '94229';
-    const CLIENT_SECRET = '1ee16d3138e7094a3e6e0729c9f874485353539a';
-    const REFRESH_TOKEN = 'e788bea11b2b03b25051c26cc3914ebb61544f08';
+          # ===== SAVE FILES =====
+          print("\n💾 Guardando archivos...")
+          
+          with open("data/activities_history.json", "w", encoding="utf-8") as f:
+              json.dump(activities, f, indent=2, ensure_ascii=False)
+          print(f"✅ Guardado: data/activities_history.json")
 
-    async function getAccessToken() {
-        const res = await fetch('https://www.strava.com/api/v3/oauth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                refresh_token: REFRESH_TOKEN,
-                grant_type: 'refresh_token'
-            })
-        });
-        const data = await res.json();
-        return data.access_token;
-    }
+          with open("data/wellness_history.json", "w", encoding="utf-8") as f:
+              json.dump(wellness, f, indent=2, ensure_ascii=False)
+          print(f"✅ Guardado: data/wellness_history.json")
 
-    async function init() {
-        try {
-            const token = await getAccessToken();
-            const res = await fetch(`https://www.strava.com/api/v3/athlete/activities?per_page=30`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const activities = await res.json();
-            render(activities);
-        } catch (e) {
-            document.getElementById('activities-list').innerText = "Error al conectar con Strava.";
-        }
-    }
+          print("\n✅ Sincronización completada!")
+          EOF
 
-    function render(activities) {
-        const list = document.getElementById('activities-list');
-        list.innerHTML = '';
+      - name: Analyze Performance and Generate Dossier
+        run: |
+          python << 'EOF'
+          import os, json
+          from datetime import datetime, timedelta
 
-        activities.forEach((act, i) => {
-            const avgHR = act.average_heartrate || 0;
-            const distKm = act.distance / 1000;
-            
-            // CAMBIO: Usamos moving_time para ignorar las pausas de Garmin
-            const timeMin = (act.moving_time / 60).toFixed(0);
-            
-            const displayDistance = distKm > 0 ? ` | ${distKm.toFixed(2)} km` : '';
-            
-            let zoneHtml = '';
-            if (avgHR >= 158) zoneHtml = '<span class="zone-badge z5">Zona 5</span>';
-            else if (avgHR >= 148) zoneHtml = '<span class="zone-badge z4">Zona 4</span>';
+          Z4_START, Z5_START = 148, 158
 
-            const card = document.createElement('div');
-            card.className = 'card';
-            
-            const hasGPS = act.map && act.map.summary_polyline;
-            const mapContent = hasGPS 
-                ? '' 
-                : `<img src="https://cdn-icons-png.flaticon.com/512/2548/2548537.png" class="no-gps-img" alt="Gimnasio">`;
+          if not os.path.exists("data/activities_history.json"):
+              print("Archivo de datos no encontrado.")
+              exit(1)
 
-            card.innerHTML = `
-                <div class="card-header">
-                    <div class="card-title">${act.name}</div>
-                    <span class="card-date">${new Date(act.start_date_local).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                </div>
-                <div class="stats">
-                    ${act.type}${displayDistance} | ${timeMin} min
-                    <br>${zoneHtml}
-                </div>
-                <div id="map-${i}" class="map-mini">${mapContent}</div>
-            `;
-            list.appendChild(card);
+          with open("data/activities_history.json", "r", encoding="utf-8") as f:
+              activities = json.load(f)
 
-            if (hasGPS) {
-                renderMap(`map-${i}`, act.map.summary_polyline);
-            }
-        });
-    }
+          runs = sorted([a for a in activities if a.get("type")=="Run"], key=lambda x: x.get("start_date",""))
+          valid_runs = [r for r in runs if r.get("distance", 0) > 1000]
 
-    function renderMap(elementId, encodedPoly) {
-        const coords = polyline.decode(encodedPoly);
-        const map = L.map(elementId, {
-            zoomControl: false, 
-            attributionControl: false, 
-            dragging: false, 
-            touchZoom: false, 
-            scrollWheelZoom: false, 
-            doubleClickZoom: false
-        }).setView(coords[0], 13);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const path = L.polyline(coords, {color: '#ff4d4d', weight: 4}).addTo(map);
-        map.fitBounds(path.getBounds());
+          if not valid_runs:
+              print("No hay carreras para analizar.")
+              exit(0)
 
-        document.getElementById(elementId).onclick = () => {
-            const modal = document.getElementById('modal-map');
-            modal.style.display = 'flex';
-            const bigMapDiv = document.getElementById('big-map');
-            
-            if (window.bigMapInstance) window.bigMapInstance.remove();
-            
-            window.bigMapInstance = L.map('big-map').setView(coords[0], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.bigMapInstance);
-            L.polyline(coords, {color: '#ff4d4d', weight: 6}).addTo(window.bigMapInstance);
-            window.bigMapInstance.fitBounds(path.getBounds());
-        };
-    }
+          last = valid_runs[-1]
+          prev = valid_runs[-2] if len(valid_runs) > 1 else last
 
-    init();
-</script>
-</body>
-</html>
+          def get_metrics(a):
+              d_km = a.get("distance", 0) / 1000
+              t_h = (a.get("moving_time", 0)) / 3600
+              hr = a.get("average_heartrate", 0)
+              vvo2max = d_km / t_h if t_h > 0 else 0
+              economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
+              return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
+
+          m_l = get_metrics(last)
+          m_p = get_metrics(prev)
+
+          dossier = (
+              f"# ATHLETE DOSSIER V8\n\n"
+              f"**Última Carrera:** {last.get('start_date')[:10]}\n"
+              f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
+              f"- **Distancia:** {m_l['dist']:.2f} km\n"
+              f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
+              f"- **Economía de carrera:** {m_l['ec']:.2f} m/latido\n\n"
+              f"**Progreso:** {'📈 Mejora' if m_l['v'] >= m_p['v'] else '📉 Estable'}\n"
+          )
+
+          with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
+              f.write(dossier)
+
+          plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
+          with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
+              f.write(plan)
+          EOF
+
+      - name: Push results to Repository
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json data/wellness_history.json
+          git commit -m "Update activities and wellness data [skip ci]" || echo "No changes"
+          git push
