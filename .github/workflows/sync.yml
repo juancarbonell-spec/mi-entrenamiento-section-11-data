@@ -1,150 +1,111 @@
-name: Full Training Engine V8
-
+name: Full Training Engine V8.1 - Road to 48
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/15 * * * *' 
   workflow_dispatch:
-
 jobs:
   sync-and-analyze:
     runs-on: ubuntu-latest
     env:
       INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
       INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-      - name: Sync Activities and Wellness from Intervals.icu
+        run: pip install requests
+
+      - name: Sync, Analyze and Generate Dossier
         run: |
           python << 'EOF'
           import requests, os, json
           from datetime import datetime, timedelta
+
           athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
           api_key = os.environ.get("INTERVALS_API_KEY","").strip()
-          if not athlete_id or not api_key:
-              print("❌ ERROR: Faltan secrets en GitHub Settings")
-              exit(1)
           os.makedirs("data", exist_ok=True)
-          # Calculate date range (last 365 days)
-          oldest = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
-          newest = datetime.now().strftime("%Y-%m-%d")
-          params = {"oldest": oldest, "newest": newest}
-          print(f"📊 Rango de fechas: {oldest} a {newest}")
-          # ===== DOWNLOAD ACTIVITIES =====
-          print("\n📍 Descargando ACTIVIDADES...")
-          activities_urls = [
-              f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
-              f"https://intervals.icu/api/v1/athlete/0/activities"
-          ]
-          
-          activities = None
-          for url in activities_urls:
-              print(f"  Intentando: {url}")
+
+          def get_intervals_data(endpoint):
+              url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/{endpoint}"
               try:
-                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  r = requests.get(url, auth=("athlete", api_key), timeout=30)
                   if r.status_code == 200:
-                      activities = r.json()
-                      print(f"✅ ACTIVIDADES: {len(activities)} registros obtenidos")
-                      break
-                  else:
-                      print(f"  ⚠️ Error {r.status_code}")
+                      data = r.json()
+                      if data and len(data) > 0:
+                          return data
+                  print(f"⚠️ Error o vacío en {endpoint}: {r.status_code}")
               except Exception as e:
-                  print(f"  ❌ Error: {e}")
-          if not activities:
-              print("❌ No se pudieron descargar actividades")
-              activities = []
-          # ===== DOWNLOAD WELLNESS =====
-          print("\n💪 Descargando WELLNESS (sleep, HRV, steps, weight, etc)...")
-          wellness_urls = [
-              f"https://intervals.icu/api/v1/athlete/{athlete_id}/wellness",
-              f"https://intervals.icu/api/v1/athlete/0/wellness"
-          ]
-          
-          wellness = None
-          for url in wellness_urls:
-              print(f"  Intentando: {url}")
-              try:
-                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
-                  if r.status_code == 200:
-                      wellness = r.json()
-                      print(f"✅ WELLNESS: {len(wellness)} registros obtenidos")
-                      break
-                  else:
-                      print(f"  ⚠️ Error {r.status_code}: {r.text[:200]}")
-              except Exception as e:
-                  print(f"  ❌ Error: {e}")
-          if not wellness:
-              print("⚠️ No se pudieron descargar datos wellness")
-              wellness = []
-          # ===== SAVE FILES =====
-          print("\n💾 Guardando archivos...")
-          
-          with open("data/activities_history.json", "w", encoding="utf-8") as f:
-              json.dump(activities, f, indent=2, ensure_ascii=False)
-          print(f"✅ Guardado: data/activities_history.json")
-          with open("data/wellness_history.json", "w", encoding="utf-8") as f:
-              json.dump(wellness, f, indent=2, ensure_ascii=False)
-          print(f"✅ Guardado: data/wellness_history.json")
-          print("\n✅ Sincronización completada!")
+                  print(f"❌ Error conexión {endpoint}: {e}")
+              return None
+
+          # 1. DESCARGA SEGURA
+          activities = get_intervals_data("activities")
+          wellness = get_intervals_data("wellness")
+
+          if activities:
+              # ORDENAR: El más reciente siempre es el índice [0]
+              activities.sort(key=lambda x: x.get("start_date_local", ""), reverse=True)
+              with open("data/activities_history.json", "w", encoding="utf-8") as f:
+                  json.dump(activities, f, indent=2, ensure_ascii=False)
+
+          if wellness:
+              wellness.sort(key=lambda x: x.get("id", ""), reverse=True)
+              with open("data/wellness_history.json", "w", encoding="utf-8") as f:
+                  json.dump(wellness, f, indent=2, ensure_ascii=False)
+
+          # 2. ANÁLISIS (Corrección de los 10km)
+          if activities:
+              runs = [a for a in activities if a.get("type") == "Run" and a.get("distance", 0) > 1500]
+              if runs:
+                  # Tomamos la más reciente (que ahora es la primera gracias al sort)
+                  last = runs[0]
+                  # Si la más reciente es un "Lap" pequeño (< 7km) pero hay otra el mismo día más grande, intentamos buscar la sesión completa
+                  # Pero con el sort 'reverse=True' de Garmin, la sesión completa suele ser la que entra última y se pone arriba.
+                  
+                  prev = runs[1] if len(runs) > 1 else last
+                  
+                  def get_metrics(a):
+                      d_km = a.get("distance", 0) / 1000
+                      t_h = (a.get("moving_time", 0)) / 3600
+                      hr = a.get("average_heartrate", 0)
+                      vvo2max = d_km / t_h if t_h > 0 else 0
+                      # Economía: Metros por latido total en la sesión
+                      economy = (d_km * 1000) / (hr * (a.get("moving_time", 0) / 60)) if hr > 0 and a.get("moving_time", 0) > 0 else 0
+                      return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km, "date": a.get("start_date_local", "")[:10]}
+
+                  m_l = get_metrics(last)
+                  m_p = get_metrics(prev)
+
+                  # Buscar VO2max en wellness
+                  current_vo2 = "Pendiente"
+                  if wellness:
+                      for day in wellness:
+                          if day.get("vo2max"):
+                              current_vo2 = day.get("vo2max")
+                              break
+
+                  dossier = (
+                      f"# ATHLETE DOSSIER V8.1\n\n"
+                      f"**Última Carrera Analizada:** {m_l['date']}\n"
+                      f"- **Distancia:** {m_l['dist']:.2f} km ✅\n"
+                      f"- **vVO2max Actual:** {m_l['v']:.2f} km/h\n"
+                      f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
+                      f"- **Economía de carrera:** {m_l['ec']:.2f} m/latido\n"
+                      f"- **VO2max (Garmin):** {current_vo2}\n\n"
+                      f"**Estado del Objetivo 48.0:** {'🚀 ¡CONSEGUIDO!' if isinstance(current_vo2, float) and current_vo2 >= 48 else '📈 En camino'}\n"
+                  )
+                  with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
+                      f.write(dossier)
           EOF
-      - name: Analyze Performance and Generate Dossier
-        run: |
-          python << 'EOF'
-          import os, json
-          from datetime import datetime, timedelta
-          Z4_START, Z5_START = 148, 158
-          if not os.path.exists("data/activities_history.json"):
-              print("Archivo de datos no encontrado.")
-              exit(1)
-          with open("data/activities_history.json", "r", encoding="utf-8") as f:
-              activities = json.load(f)
-          runs = sorted([a for a in activities if a.get("type")=="Run"], key=lambda x: x.get("start_date",""))
-          valid_runs = [r for r in runs if r.get("distance", 0) > 1000]
-          if not valid_runs:
-              print("No hay carreras para analizar.")
-              exit(0)
-          last = valid_runs[-1]
-          prev = valid_runs[-2] if len(valid_runs) > 1 else last
-          def get_metrics(a):
-              d_km = a.get("distance", 0) / 1000
-              t_h = (a.get("moving_time", 0)) / 3600
-              hr = a.get("average_heartrate", 0)
-              vvo2max = d_km / t_h if t_h > 0 else 0
-              economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
-              return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
-          m_l = get_metrics(last)
-          m_p = get_metrics(prev)
-          dossier = (
-              f"# ATHLETE DOSSIER V8\n\n"
-              f"**Última Carrera:** {last.get('start_date')[:10]}\n"
-              f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
-              f"- **Distancia:** {m_l['dist']:.2f} km\n"
-              f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
-              f"- **Economía de carrera:** {m_l['ec']:.2f} m/latido\n\n"
-              f"**Progreso:** {'📈 Mejora' if m_l['v'] >= m_p['v'] else '📉 Estable'}\n"
-          )
-          with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
-              f.write(dossier)
-          plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
-          with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
-              f.write(plan)
-          EOF
-      - name: Push results to Repository
+
+      - name: Push results
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json data/wellness_history.json
-          git commit -m "Update activities and wellness data [skip ci]" || echo "No changes"
+          git add ATHLETE_DOSSIER.md data/*.json
+          git commit -m "Update Dossier and Data [skip ci]" || echo "No changes"
           git push
