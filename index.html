@@ -54,7 +54,7 @@
         try {
             const response = await fetch(JSON_URL);
             const data = await response.json();
-            const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 10);
+            const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 30);
             
             const list = document.getElementById('activities-list');
             list.innerHTML = '';
