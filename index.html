@@ -3,102 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Últimas Actividades - Juan</title>
+    <title>Panel de Entrenamiento - Juan</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f9; padding: 20px; }
-        h1 { text-align: center; color: #333; }
-        .activity-card { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; padding: 15px; display: flex; flex-wrap: wrap; gap: 15px; }
-        .info { flex: 1; min-width: 250px; }
-        .info h2 { margin: 0 0 10px 0; color: #007bff; font-size: 1.2em; }
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em; }
-        .map-container { width: 300px; height: 200px; border-radius: 8px; overflow: hidden; background: #eee; }
-        @media (max-width: 600px) { .map-container { width: 100%; } }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #1a73e8; margin-bottom: 30px; }
+        #activities-container { max-width: 900px; margin: 0 auto; }
+        .card { background: white; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 25px; display: flex; overflow: hidden; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .info { flex: 1; padding: 20px; display: flex; flex-direction: column; justify-content: center; }
+        .info h2 { margin: 0 0 10px 0; font-size: 1.25rem; color: #1a73e8; text-transform: capitalize; }
+        .date { color: #666; font-size: 0.9rem; margin-bottom: 15px; }
+        .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .stat-item { background: #f8f9fa; padding: 8px; border-radius: 8px; text-align: center; }
+        .stat-label { display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; }
+        .stat-value { font-weight: bold; font-size: 1rem; color: #222; }
+        .map-box { width: 350px; height: 250px; background: #e0e0e0; position: relative; }
+        @media (max-width: 768px) { .card { flex-direction: column; } .map-box { width: 100%; height: 200px; } }
     </style>
 </head>
 <body>
 
     <h1>Mis 10 Últimas Actividades</h1>
-    <div id="activities-container">Cargando actividades...</div>
+    <div id="activities-container">Cargando tus datos de entrenamiento...</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
+        const URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
 
-        async function loadActivities() {
+        async function init() {
             try {
-                const response = await fetch(JSON_URL);
-                const data = await response.json();
+                const res = await fetch(URL);
+                const data = await res.json();
                 
-                // Ordenar por fecha y coger las últimas 10
-                const last10 = data.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+                // Los datos están en un array. Ordenamos por fecha descendente.
+                const activities = data.sort((a, b) => new Date(b.start_time) - new Date(a.start_time)).slice(0, 10);
                 
                 const container = document.getElementById('activities-container');
                 container.innerHTML = '';
 
-                last10.forEach((act, index) => {
-                    const card = document.createElement('div');
-                    card.className = 'activity-card';
+                activities.forEach((act, i) => {
+                    const dateObj = new Date(act.start_time);
+                    const formattedDate = dateObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     
-                    // Generar HTML de la tarjeta
+                    const distKm = (act.distance_meters / 1000).toFixed(2);
+                    const durationMin = Math.floor(act.duration_seconds / 60);
+                    const avgHR = act.average_heart_rate || '--';
+
+                    const card = document.createElement('div');
+                    card.className = 'card';
                     card.innerHTML = `
                         <div class="info">
-                            <h2>${act.name || 'Actividad sin nombre'}</h2>
-                            <p><strong>Fecha:</strong> ${new Date(act.date).toLocaleDateString()}</p>
+                            <h2>${act.type || 'Actividad'}</h2>
+                            <div class="date">${formattedDate}</div>
                             <div class="stats">
-                                <div><strong>Distancia:</strong> ${(act.distance / 1000).toFixed(2)} km</div>
-                                <div><strong>Tiempo:</strong> ${(act.duration / 60).toFixed(1)} min</div>
-                                <div><strong>FC Media:</strong> ${act.average_hr || '--'} ppm</div>
-                                <div><strong>Calorías:</strong> ${act.calories || '--'} kcal</div>
+                                <div class="stat-item"><span class="stat-label">Distancia</span><span class="stat-value">${distKm} km</span></div>
+                                <div class="stat-item"><span class="stat-label">Duración</span><span class="stat-value">${durationMin} min</span></div>
+                                <div class="stat-item"><span class="stat-label">FC Media</span><span class="stat-value">${avgHR} bpm</span></div>
+                                <div class="stat-item"><span class="stat-label">Calorías</span><span class="stat-value">${act.calories || '--'}</span></div>
                             </div>
                         </div>
-                        <div id="map-${index}" class="map-container"></div>
+                        <div id="map-${i}" class="map-box"></div>
                     `;
-                    
                     container.appendChild(card);
 
-                    // Dibujar mapa si existen coordenadas (polyline)
-                    if (act.map_polyline) {
-                        const map = L.map(`map-${index}`, { zoomControl: false, attributionControl: false }).setView([0,0], 13);
+                    // Renderizar mapa si hay coordenadas
+                    // Ajuste: Tus datos usan 'map' -> 'summary_polyline' o similar
+                    const polylineData = act.map?.summary_polyline || act.polyline; 
+                    
+                    if (polylineData) {
+                        const map = L.map(`map-${i}`, { zoomControl: false, attributionControl: false });
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                        
-                        // Decodificar la línea (esto es una simplificación, asumiendo formato estándar)
-                        // Si tus datos usan coordenadas lat/lng directas, se mapean aquí:
                         try {
-                            const coordinates = decodePolyline(act.map_polyline); 
-                            const polyline = L.polyline(coordinates, {color: 'red'}).addTo(map);
-                            map.fitBounds(polyline.getBounds());
-                        } catch(e) { 
-                            document.getElementById(`map-${index}`).innerHTML = "<p style='padding:70px 20px;text-align:center'>Mapa no disponible</p>";
-                        }
+                            const coords = decodePolyline(polylineData);
+                            const polyline = L.polyline(coords, {color: '#ff4400', weight: 4}).addTo(map);
+                            map.fitBounds(polyline.getBounds(), {padding: [10, 10]});
+                        } catch(e) { console.error("Error mapa", e); }
                     } else {
-                        document.getElementById(`map-${index}`).innerHTML = "<p style='padding:70px 20px;text-align:center'>Sin datos GPS</p>";
+                        document.getElementById(`map-${i}`).innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100%;color:#999'>Sin datos GPS</div>";
                     }
                 });
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('activities-container').innerText = 'Error al cargar los datos.';
+            } catch (err) {
+                document.getElementById('activities-container').innerHTML = "Error cargando el JSON. Revisa la consola.";
             }
         }
 
-        // Función auxiliar para decodificar polylines de Strava/Garmin
-        function decodePolyline(encoded) {
-            let points = [];
-            let index = 0, len = encoded.length;
-            let lat = 0, lng = 0;
-            while (index < len) {
-                let b, shift = 0, result = 0;
-                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-                let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1)); lat += dlat;
+        function decodePolyline(str) {
+            let index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, lat_change, lng_change;
+            while (index < str.length) {
+                byte = null; shift = 0; result = 0;
+                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+                lat_change = ((result & 1) ? ~(result >> 1) : (result >> 1)); lat += lat_change;
                 shift = 0; result = 0;
-                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-                let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1)); lng += dlng;
-                points.push([lat / 1e5, lng / 1e5]);
+                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+                lng_change = ((result & 1) ? ~(result >> 1) : (result >> 1)); lng += lng_change;
+                coordinates.push([lat / 1e5, lng / 1e5]);
             }
-            return points;
+            return coordinates;
         }
 
-        loadActivities();
+        init();
     </script>
 </body>
 </html>
