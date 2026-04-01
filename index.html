@@ -6,128 +6,119 @@
     <title>Actividades de Juan</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 10px; color: #333; }
-        .container { max-width: 480px; margin: 0 auto; background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .header { padding: 15px; border-bottom: 1px solid #eee; }
-        .header h1 { margin: 0; font-size: 18px; color: #333; }
-        .header p { margin: 4px 0 0; font-size: 13px; color: #666; }
-        
-        .activity-card { display: flex; padding: 12px; border-bottom: 1px solid #eee; min-height: 95px; align-items: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f2f2f2; margin: 0; padding: 10px; }
+        .container { max-width: 450px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { padding: 20px; border-bottom: 1px solid #eee; }
+        .header h1 { margin: 0; font-size: 20px; color: #333; font-weight: 800; }
+        .header p { margin: 2px 0 0; font-size: 13px; color: #888; }
+
+        .activity-card { display: flex; padding: 15px; border-bottom: 1px solid #f9f9f9; align-items: center; }
         .activity-card:last-child { border-bottom: none; }
-        
-        .map-thumb { width: 90px; height: 90px; border-radius: 4px; background: #ececec; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+
+        /* Cuadrado de la izquierda */
+        .map-box { width: 85px; height: 85px; border-radius: 12px; background: #f0f0f0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; border: 1px solid #eee; }
         
         .activity-info { margin-left: 15px; flex-grow: 1; }
-        .activity-name { margin: 0; font-size: 15px; color: #007fb8; font-weight: 600; }
-        .activity-stats { margin: 4px 0; font-size: 13px; color: #444; font-weight: 500; }
-        .activity-stats span { margin-right: 12px; }
-        .activity-date { margin: 0; font-size: 12px; color: #888; text-transform: lowercase; }
-        
-        .no-gps-text { font-size: 10px; color: #999; text-align: center; font-weight: bold; }
-        /* Estilo para que la mancuerna se vea bien */
-        .gym-icon { width: 50px; height: 50px; color: #666; opacity: 0.9; }
+        .activity-name { margin: 0; font-size: 16px; color: #007fb8; font-weight: 700; line-height: 1.2; }
+        .activity-stats { margin: 6px 0; font-size: 14px; color: #444; display: flex; gap: 10px; font-weight: 600; }
+        .activity-date { margin: 0; font-size: 12px; color: #999; text-transform: capitalize; }
+
+        /* Iconos */
+        .icon-svg { width: 50px; height: 50px; fill: #222; } /* Mancuerna negra y sólida */
+        .map-placeholder { width: 100%; height: 100%; background: #e0e0e0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #aaa; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <h1>Juan C</h1>
-            <p>Últimas actividades de entrenamiento</p>
-        </div>
-        <div id="activities-list"></div>
+<div class="container">
+    <div class="header">
+        <h1>Juan Carbonell</h1>
+        <p>Entrenamientos recientes</p>
     </div>
+    <div id="activities-list"></div>
+</div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const JSON_URL = 'https://raw.githubusercontent.com/juancarbonell-spec/mi-entrenamiento-section-11-data/refs/heads/main/data/activities_history.json';
 
-        function formatDuration(seconds) {
-            if (!seconds) return "--:--";
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = seconds % 60;
-            if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            return `${m}:${s.toString().padStart(2, '0')}`;
-        }
+    function formatDuration(s) {
+        if (!s) return "0:00";
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}` : `${m}:${sec.toString().padStart(2, '0')}`;
+    }
 
-        async function loadData() {
-            try {
-                const response = await fetch(JSON_URL);
-                const data = await response.json();
-                const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 10);
-                
-                const list = document.getElementById('activities-list');
-                list.innerHTML = '';
+    async function loadData() {
+        try {
+            const response = await fetch(JSON_URL);
+            const data = await response.json();
+            const sorted = data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date)).slice(0, 10);
+            
+            const list = document.getElementById('activities-list');
+            list.innerHTML = '';
 
-                sorted.forEach((act, i) => {
-                    const date = new Date(act.start_date_local || act.start_date);
-                    const dateStr = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                    
-                    const nameLower = (act.name || "").toLowerCase();
-                    const typeLower = (act.type || "").toLowerCase();
-                    // Detectamos si es fuerza por nombre o por tipo
-                    const isStrength = typeLower.includes('weight') || typeLower.includes('fuerza') || typeLower.includes('strength') || nameLower.includes('fuerza');
-                    
-                    const distStr = (!isStrength && act.distance > 0) ? `<span>${(act.distance / 1000).toFixed(1).replace('.', ',')} km</span>` : '';
-                    const timeStr = `<span>${formatDuration(act.moving_time || act.elapsed_time)}</span>`;
-                    const eleStr = (!isStrength && act.total_elevation_gain > 0) ? `<span>+${Math.round(act.total_elevation_gain)} m</span>` : '';
+            sorted.forEach((act, i) => {
+                const date = new Date(act.start_date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+                const type = (act.type || "").toLowerCase();
+                const isFuerza = type.includes('weight') || type.includes('fuerza') || (act.name || "").toLowerCase().includes('fuerza');
 
-                    const card = document.createElement('div');
-                    card.className = 'activity-card';
-                    card.innerHTML = `
-                        <div class="map-thumb" id="map-${i}"></div>
-                        <div class="activity-info">
-                            <h2 class="activity-name">${act.name || act.type}</h2>
-                            <div class="activity-stats">${distStr}${timeStr}${eleStr}</div>
-                            <p class="activity-date">${dateStr}</p>
+                const card = document.createElement('div');
+                card.className = 'activity-card';
+                card.innerHTML = `
+                    <div class="map-box" id="map-${i}"></div>
+                    <div class="activity-info">
+                        <h2 class="activity-name">${act.name || act.type}</h2>
+                        <div class="activity-stats">
+                            ${!isFuerza && act.distance ? `<span>${(act.distance / 1000).toFixed(1).replace('.', ',')} km</span>` : ''}
+                            <span>${formatDuration(act.moving_time || act.elapsed_time)}</span>
                         </div>
-                    `;
-                    list.appendChild(card);
+                        <p class="activity-date">${date}</p>
+                    </div>`;
+                list.appendChild(card);
 
-                    const poly = act.map_polyline || (act.map && act.map.summary_polyline) || act.polyline || act.summary_polyline;
+                // Lógica de visualización en el cuadro
+                const poly = act.map_polyline || (act.map && act.map.summary_polyline);
 
-                    if (poly && poly.length > 5) {
-                        const m = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false });
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
-                        try {
-                            const coords = decode(poly);
-                            const line = L.polyline(coords, {color: '#ff4400', weight: 3, opacity: 0.8}).addTo(m);
-                            m.fitBounds(line.getBounds(), {padding: [2, 2]});
-                        } catch(e) { console.error("Error GPS", e); }
+                if (poly) {
+                    // Si hay datos, dibujamos el mapa (Imagen estática simulada con Leaflet)
+                    const m = L.map(`map-${i}`, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false });
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+                    const coords = decode(poly);
+                    const line = L.polyline(coords, {color: '#ff4400', weight: 4}).addTo(m);
+                    m.fitBounds(line.getBounds(), {padding: [5, 5]});
+                } else {
+                    const box = document.getElementById(`map-${i}`);
+                    if (isFuerza) {
+                        // MANCUERNA NEGRA Y SÓLIDA
+                        box.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M5,18V14H3V10H5V6H7V18H5M21,14V10H19V6H17V18H19V14H21M15,8V16H9V8H15M11,10V14H13V10H11Z"/></svg>`;
                     } else {
-                        const thumb = document.getElementById(`map-${i}`);
-                        if (isStrength) {
-                            // Nuevo icono de mancuerna más claro y visible
-                            thumb.innerHTML = `
-                                <svg class="gym-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M6.5 6.5h11M6.5 17.5h11M12 6.5v11M3.5 10v4M20.5 10v4M2 12h2.5M19.5 12H22M5.5 5v14M18.5 5v14"/>
-                                </svg>`;
-                        } else {
-                            thumb.innerHTML = '<div class="no-gps-text">SIN<br>GPS</div>';
-                        }
+                        // Icono de mapa genérico si no hay ruta
+                        box.innerHTML = `<div class="map-placeholder">
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="#ccc"><path d="M20.5,3l-7.2,2.4L7,3L3.5,4.2C3.2,4.3,3,4.6,3,4.9v14.6c0,0.3,0.2,0.6,0.5,0.7l7,2.3l6.3-2.1l3.7,1.2c0.3,0.1,0.5-0.1,0.5-0.4V3.5C21,3.2,20.8,3,20.5,3z M15,19l-4,1.3V6.4l4-1.3V19z"/></svg>
+                            <span style="margin-top:5px">SIN RUTA</span>
+                        </div>`;
                     }
-                });
-            } catch (e) {
-                document.getElementById('activities-list').innerHTML = '<p style="padding:20px">Error al cargar datos.</p>';
-            }
-        }
+                }
+            });
+        } catch (e) { console.error(e); }
+    }
 
-        function decode(str) {
-            let index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, lat_change, lng_change;
-            while (index < str.length) {
-                byte = null; shift = 0; result = 0;
-                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-                lat_change = ((result & 1) ? ~(result >> 1) : (result >> 1)); lat += lat_change;
-                shift = 0; result = 0;
-                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
-                lng_change = ((result & 1) ? ~(result >> 1) : (result >> 1)); lng += lng_change;
-                coordinates.push([lat / 1e5, lng / 1e5]);
-            }
-            return coordinates;
+    function decode(str) {
+        let index = 0, lat = 0, lng = 0, coords = [], shift, result, byte;
+        while (index < str.length) {
+            shift = 0; result = 0;
+            do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+            lat += ((result & 1) ? ~(result >> 1) : (result >> 1));
+            shift = 0; result = 0;
+            do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+            lng += ((result & 1) ? ~(result >> 1) : (result >> 1));
+            coords.push([lat / 1e5, lng / 1e5]);
         }
-
-        loadData();
-    </script>
+        return coords;
+    }
+    loadData();
+</script>
 </body>
 </html>
