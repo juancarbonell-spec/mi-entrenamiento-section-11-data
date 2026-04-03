@@ -8,11 +8,12 @@ on:
 jobs:
   sync-and-analyze:
     runs-on: ubuntu-latest
-   
+    
     env:
       INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
       INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,15 +35,19 @@ jobs:
           from datetime import datetime, timedelta
           athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
           api_key = os.environ.get("INTERVALS_API_KEY","").strip()
+          
           if not athlete_id or not api_key:
               print("❌ ERROR: Faltan secrets en GitHub Settings")
               exit(1)
+              
           os.makedirs("data", exist_ok=True)
-          # Calculate date range (last 365 days)
+          
+          # Rango de fechas (últimos 365 días)
           oldest = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
           newest = datetime.now().strftime("%Y-%m-%d")
           params = {"oldest": oldest, "newest": newest}
           print(f"📊 Rango de fechas: {oldest} a {newest}")
+
           # ===== DOWNLOAD ACTIVITIES =====
           print("\n📍 Descargando ACTIVIDADES...")
           activities_urls = [
@@ -62,11 +67,12 @@ jobs:
                       print(f"  ⚠️ Error {r.status_code}")
               except Exception as e:
                   print(f"  ❌ Error: {e}")
+          
           if not activities:
-              print("❌ No se pudieron descargar actividades")
               activities = []
+
           # ===== DOWNLOAD WELLNESS =====
-          print("\n💪 Descargando WELLNESS (sleep, HRV, steps, weight, etc)...")
+          print("\n💪 Descargando WELLNESS...")
           wellness_urls = [
               f"https://intervals.icu/api/v1/athlete/{athlete_id}/wellness",
               f"https://intervals.icu/api/v1/athlete/0/wellness"
@@ -81,21 +87,30 @@ jobs:
                       print(f"✅ WELLNESS: {len(wellness)} registros obtenidos")
                       break
                   else:
-                      print(f"  ⚠️ Error {r.status_code}: {r.text[:200]}")
+                      print(f"  ⚠️ Error {r.status_code}")
               except Exception as e:
                   print(f"  ❌ Error: {e}")
+          
           if not wellness:
-              print("⚠️ No se pudieron descargar datos wellness")
               wellness = []
+
           # ===== SAVE FILES =====
           print("\n💾 Guardando archivos...")
+          
+          # 1. Activities (Orden original de la API: recientes arriba)
           with open("data/activities_history.json", "w", encoding="utf-8") as f:
               json.dump(activities, f, indent=2, ensure_ascii=False)
-          print(f"✅ Guardado: data/activities_history.json")
+          
+          # 2. Wellness original (Orden original de la API: antiguos arriba)
           with open("data/wellness_history.json", "w", encoding="utf-8") as f:
               json.dump(wellness, f, indent=2, ensure_ascii=False)
-          print(f"✅ Guardado: data/wellness_history.json")
-          print("\n✅ Sincronización completada!")
+          
+          # 3. Wellness ordenado (NUEVO: lo más reciente arriba)
+          wellness_recent = sorted(wellness, key=lambda x: x.get("id", ""), reverse=True)
+          with open("data/wellness_history_recent.json", "w", encoding="utf-8") as f:
+              json.dump(wellness_recent, f, indent=2, ensure_ascii=False)
+          
+          print("✅ Archivos guardados correctamente en /data")
           EOF
 
       - name: Analyze Performance and Generate Dossier
@@ -104,22 +119,21 @@ jobs:
           import os, json
           from datetime import datetime, timedelta
           Z4_START, Z5_START = 148, 157
+          
           if not os.path.exists("data/activities_history.json"):
               print("Archivo de datos no encontrado.")
               exit(1)
+              
           with open("data/activities_history.json", "r", encoding="utf-8") as f:
               activities = json.load(f)
           
-          # Filtrar solo carreras
           runs = [a for a in activities if a.get("type")=="Run" and a.get("distance", 0) > 1000]
           if not runs:
               print("No hay carreras para analizar.")
               exit(0)
           
-          # Ordenar por fecha (más reciente primero)
           runs.sort(key=lambda x: x.get("start_date", ""), reverse=True)
 
-          # Lógica para evitar laps cortos: si las dos primeras son del mismo día, elige la más larga
           last = runs[0]
           if len(runs) > 1:
               date_0 = runs[0].get("start_date", "")[:10]
@@ -147,7 +161,7 @@ jobs:
               f"# ATHLETE DOSSIER V8\n\n"
               f"**Última Carrera Analizada:** {last.get('start_date')[:10]}\n"
               f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
-              f"- **Distancia:** {m_l['dist']:.2f} km ✅ (Seleccionada la mayor del día)\n"
+              f"- **Distancia:** {m_l['dist']:.2f} km ✅\n"
               f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
               f"- **Economía de carrera:** {m_l['ec']:.2f} m/latido\n\n"
               f"**Progreso:** {'📈 Mejora' if m_l['v'] >= m_p['v'] else '📉 Estable o Recuperación'}\n"
@@ -164,6 +178,6 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json data/wellness_history.json
-          git commit -m "Update activities and wellness data [skip ci]" || echo "No changes"
+          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json data/wellness_history.json data/wellness_history_recent.json
+          git commit -m "Update training data and ordered wellness [skip ci]" || echo "No changes"
           git push
