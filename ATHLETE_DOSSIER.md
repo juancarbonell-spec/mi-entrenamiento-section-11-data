@@ -1,9 +1,9 @@
 # ATHLETE DOSSIER V8
 
-**Última Carrera Analizada:** 2026-04-02
-- **vVO2max:** 10.57 km/h
-- **Distancia:** 10.27 km
-- **FC Media:** 150 ppm
-- **Economía de carrera:** 1.17 m/latido
+**Última Carrera Analizada:** 2026-04-04
+- **vVO2max:** 9.79 km/h
+- **Distancia:** 10.13 km
+- **FC Media:** 135 ppm
+- **Economía de carrera:** 1.21 m/latido
 
-**Progreso:** 📈 Mejora
+**Progreso:** 📉 Estable o Recuperación
