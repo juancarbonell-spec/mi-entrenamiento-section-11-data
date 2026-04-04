@@ -14,7 +14,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-04T19:13:46.650+00:00",
+    "updated": "2026-04-04T23:53:02.796+00:00",
     "weight": null,
     "restingHR": 46,
     "hrv": 41.0,
@@ -32,7 +32,7 @@
     "mood": null,
     "motivation": null,
     "injury": null,
-    "spO2": 96.0,
+    "spO2": 94.0,
     "systolic": null,
     "diastolic": null,
     "hydration": null,
@@ -46,7 +46,7 @@
     "vo2max": 47.0,
     "comments": null,
     "steps": 18181,
-    "respiration": 13.705926,
+    "respiration": 13.701991,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
@@ -69,7 +69,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-04T05:39:53.157+00:00",
+    "updated": "2026-04-04T23:53:05.443+00:00",
     "weight": null,
     "restingHR": 45,
     "hrv": 41.0,
