@@ -1076,8 +1076,8 @@
     "file_type": "fit",
     "icu_athlete_id": "i541784",
     "created": "2026-03-31T07:24:59.428+00:00",
-    "icu_sync_date": "2026-04-05T11:22:12.626+00:00",
-    "analyzed": "2026-04-05T11:22:12.626+00:00",
+    "icu_sync_date": "2026-04-05T11:36:46.439+00:00",
+    "analyzed": "2026-04-05T11:36:46.439+00:00",
     "icu_w_prime": null,
     "p_max": null,
     "threshold_pace": null,
@@ -1218,6 +1218,7 @@
     "icu_average_watts": null,
     "icu_variability_index": null,
     "strain_score": null,
+    "Vo2max": 888681.0,
     "GarminPC": -2.0,
     "Vo2maxest": 888681.0
   },
