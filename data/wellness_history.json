@@ -14,7 +14,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-05T05:10:47.918+00:00",
+    "updated": "2026-04-05T05:37:14.139+00:00",
     "weight": null,
     "restingHR": 42,
     "hrv": 44.0,
@@ -46,14 +46,14 @@
     "vo2max": null,
     "comments": null,
     "steps": 112,
-    "respiration": 12.476666,
+    "respiration": 12.075714,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
     "locked": null,
     "tempWeight": false,
     "tempRestingHR": false,
-    "BodyBatteryMax": 89,
+    "BodyBatteryMax": 91,
     "BodyBatteryMin": 43
   },
   {
