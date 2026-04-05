@@ -242,7 +242,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-05T03:18:03.329+00:00",
+    "updated": "2026-04-05T09:32:39.336+00:00",
     "weight": null,
     "restingHR": 43,
     "hrv": 48.0,
@@ -250,7 +250,7 @@
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
     "kcalConsumed": null,
-    "sleepSecs": 24266,
+    "sleepSecs": 24240,
     "sleepScore": 81.0,
     "sleepQuality": 2,
     "avgSleepingHR": null,
@@ -299,7 +299,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-05T03:18:09.325+00:00",
+    "updated": "2026-04-05T09:51:46.816+00:00",
     "weight": null,
     "restingHR": 46,
     "hrv": 51.0,
@@ -307,7 +307,7 @@
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
     "kcalConsumed": null,
-    "sleepSecs": 33447,
+    "sleepSecs": 33420,
     "sleepScore": 83.0,
     "sleepQuality": 2,
     "avgSleepingHR": null,
@@ -338,8 +338,8 @@
     "locked": null,
     "tempWeight": true,
     "tempRestingHR": false,
-    "BodyBatteryMax": 98,
-    "BodyBatteryMin": 43
+    "BodyBatteryMax": null,
+    "BodyBatteryMin": null
   },
   {
     "id": "2026-03-30",
@@ -356,7 +356,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-05T03:18:13.211+00:00",
+    "updated": "2026-04-05T09:54:08.472+00:00",
     "weight": null,
     "restingHR": 45,
     "hrv": 50.48077,
@@ -364,7 +364,7 @@
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
     "kcalConsumed": null,
-    "sleepSecs": 32398,
+    "sleepSecs": 32340,
     "sleepScore": 91.0,
     "sleepQuality": 1,
     "avgSleepingHR": null,
