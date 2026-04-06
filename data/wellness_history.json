@@ -14,7 +14,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-06T06:19:08.365+00:00",
+    "updated": "2026-04-06T07:14:06.408+00:00",
     "weight": null,
     "restingHR": 44,
     "hrv": 46.0,
@@ -45,7 +45,7 @@
     "abdomen": null,
     "vo2max": null,
     "comments": null,
-    "steps": 77,
+    "steps": 7460,
     "respiration": 11.600454,
     "carbohydrates": null,
     "protein": null,
