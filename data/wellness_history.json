@@ -71,7 +71,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-06T01:03:29.573+00:00",
+    "updated": "2026-04-06T13:32:25.242+00:00",
     "weight": null,
     "restingHR": 42,
     "hrv": 44.0,
@@ -103,7 +103,7 @@
     "vo2max": null,
     "comments": null,
     "steps": 3990,
-    "respiration": 11.817412,
+    "respiration": 11.969992,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
@@ -128,7 +128,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-05T11:09:04.912+00:00",
+    "updated": "2026-04-06T13:32:24.648+00:00",
     "weight": null,
     "restingHR": 46,
     "hrv": 41.0,
@@ -160,7 +160,7 @@
     "vo2max": 47.0,
     "comments": null,
     "steps": 18181,
-    "respiration": 13.701991,
+    "respiration": 13.294286,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,

@@ -38,7 +38,7 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-04-06T01:03:29.573+00:00",
+    "updated": "2026-04-06T13:32:25.242+00:00",
     "restingHR": 42,
     "hrv": 44.0,
     "sleepSecs": 29280,
@@ -46,7 +46,7 @@
     "sleepQuality": 3,
     "spO2": 94.0,
     "steps": 3990,
-    "respiration": 11.817412,
+    "respiration": 11.969992,
     "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 93,
@@ -64,7 +64,7 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-04-05T11:09:04.912+00:00",
+    "updated": "2026-04-06T13:32:24.648+00:00",
     "restingHR": 46,
     "hrv": 41.0,
     "sleepSecs": 30540,
@@ -73,7 +73,7 @@
     "spO2": 94.0,
     "vo2max": 47.0,
     "steps": 18181,
-    "respiration": 13.701991,
+    "respiration": 13.294286,
     "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 79,
