@@ -33,6 +33,7 @@ jobs:
           python << 'EOF'
           import requests, os, json
           from datetime import datetime, timedelta
+
           athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
           api_key = os.environ.get("INTERVALS_API_KEY","").strip()
           
@@ -76,18 +77,38 @@ jobs:
               except Exception:
                   continue
 
+          # ===== ORDER WELLNESS =====
+          wellness_ordered = sorted(wellness, key=lambda x: x.get("id", ""), reverse=True)
+
+          # ===== REMOVE NULLS FUNCTION =====
+          def remove_nulls(obj):
+              if isinstance(obj, dict):
+                  return {k: remove_nulls(v) for k, v in obj.items() if v is not None}
+              elif isinstance(obj, list):
+                  return [remove_nulls(i) for i in obj if i is not None]
+              else:
+                  return obj
+
+          # ===== CLEAN DATA =====
+          activities_clean = remove_nulls(activities)
+          wellness_clean = remove_nulls(wellness_ordered)
+
           # ===== SAVE FILES =====
-          # 1. Activities (Recientes arriba)
+          # Originales
           with open("data/activities_history.json", "w", encoding="utf-8") as f:
               json.dump(activities, f, indent=2, ensure_ascii=False)
-          
-          # 2. Wellness (Ahora ordenado: lo más reciente arriba)
-          # Mantenemos el nombre original 'wellness_history.json'
-          wellness_ordered = sorted(wellness, key=lambda x: x.get("id", ""), reverse=True)
+
           with open("data/wellness_history.json", "w", encoding="utf-8") as f:
               json.dump(wellness_ordered, f, indent=2, ensure_ascii=False)
-          
-          print("✅ Archivos actualizados en /data con orden descendente (nuevo arriba)")
+
+          # Limpios (sin null)
+          with open("data/activities_clean.json", "w", encoding="utf-8") as f:
+              json.dump(activities_clean, f, indent=2, ensure_ascii=False)
+
+          with open("data/wellness_clean.json", "w", encoding="utf-8") as f:
+              json.dump(wellness_clean, f, indent=2, ensure_ascii=False)
+
+          print("✅ Archivos generados: originales + versiones limpias sin null")
           EOF
 
       - name: Analyze Performance and Generate Dossier
@@ -152,6 +173,8 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md data/activities_history.json data/wellness_history.json
-          git commit -m "Update training data (Descending order) [skip ci]" || echo "No changes"
+          git add ATHLETE_DOSSIER.md TRAINING_PLAN.md \
+          data/activities_history.json data/wellness_history.json \
+          data/activities_clean.json data/wellness_clean.json
+          git commit -m "Update training data (clean + raw) [skip ci]" || echo "No changes"
           git push
