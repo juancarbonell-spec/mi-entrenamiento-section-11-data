@@ -1,0 +1,31 @@
+import os
+import json
+
+FIT_FOLDER = "C:/ruta/tu_repo/fit_files"
+JSON_FILE = "C:/ruta/tu_repo/fit_files_index.json"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/tu_usuario/tu_repo/main/fit_files/"
+
+fit_files = [f for f in os.listdir(FIT_FOLDER) if f.lower().endswith(".fit")]
+fit_files.sort()
+
+fit_index = []
+for f in fit_files:
+    if "-" in f:
+        date_part, _ = f.split("-", 1)
+        date_str, time_str = date_part.split(" ")
+        time_str = time_str.replace(".", ":")
+        date_str = date_str.replace(".", "-")
+    else:
+        date_str = "unknown"
+        time_str = "unknown"
+
+    fit_index.append({
+        "date": date_str,
+        "time": time_str,
+        "fit_url": GITHUB_RAW_BASE + f
+    })
+
+with open(JSON_FILE, "w") as fp:
+    json.dump(fit_index, fp, indent=2)
+
+print(f"JSON generado con {len(fit_files)} FITs")
