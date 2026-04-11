@@ -91,12 +91,12 @@ jobs:
 
           activities_30_clean = remove_nulls([
               a for a in activities
-              if a.get("start_date", "")[:10] >= cutoff
+              if (a.get("start_date") or "")[:10] >= cutoff
           ])
 
           wellness_30_clean = remove_nulls([
               w for w in wellness_ordered
-              if w.get("id", "")[:10] >= cutoff
+              if (w.get("id") or "")[:10] >= cutoff
           ])
 
           # ===== SAVE FILES =====
@@ -130,18 +130,19 @@ jobs:
           with open("data/activities_history.json", "r", encoding="utf-8") as f:
               activities = json.load(f)
           
-          runs = [a for a in activities if a.get("type")=="Run" and a.get("distance", 0) > 1000]
+          # Fix: usar (a.get("distance") or 0) para evitar None
+          runs = [a for a in activities if a.get("type")=="Run" and (a.get("distance") or 0) > 1000]
           if not runs:
               exit(0)
           
-          runs.sort(key=lambda x: x.get("start_date", ""), reverse=True)
+          runs.sort(key=lambda x: x.get("start_date") or "", reverse=True)
 
           last = runs[0]
           if len(runs) > 1:
-              date_0 = runs[0].get("start_date", "")[:10]
-              date_1 = runs[1].get("start_date", "")[:10]
+              date_0 = (runs[0].get("start_date") or "")[:10]
+              date_1 = (runs[1].get("start_date") or "")[:10]
               if date_0 == date_1:
-                  last = runs[0] if runs[0].get("distance", 0) > runs[1].get("distance", 0) else runs[1]
+                  last = runs[0] if (runs[0].get("distance") or 0) > (runs[1].get("distance") or 0) else runs[1]
                   prev = runs[2] if len(runs) > 2 else last
               else:
                   prev = runs[1]
@@ -149,9 +150,9 @@ jobs:
               prev = last
 
           def get_metrics(a):
-              d_km = a.get("distance", 0) / 1000
-              t_h = (a.get("moving_time", 0)) / 3600
-              hr = a.get("average_heartrate", 0)
+              d_km = (a.get("distance") or 0) / 1000
+              t_h = (a.get("moving_time") or 0) / 3600
+              hr = (a.get("average_heartrate") or 0)
               vvo2max = d_km / t_h if t_h > 0 else 0
               economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
               return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
@@ -161,7 +162,7 @@ jobs:
 
           dossier = (
               f"# ATHLETE DOSSIER V8\n\n"
-              f"**Última Carrera Analizada:** {last.get('start_date')[:10]}\n"
+              f"**Última Carrera Analizada:** {(last.get('start_date') or '')[:10]}\n"
               f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
               f"- **Distancia:** {m_l['dist']:.2f} km\n"
               f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
