@@ -84,38 +84,55 @@ jobs:
                   continue
 
           # ===== ORDER WELLNESS =====
-          wellness_ordered = sorted(wellness, key=lambda x: x.get("id", ""), reverse=True)
+          wellness_ordered = sorted(wellness, key=lambda x: x.get("id") or "", reverse=True)
 
-          # ===== FILTER LAST 30 DAYS =====
+          # ===== CUTOFF 30 DIAS =====
           cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
-          activities_30_clean = remove_nulls([
+          # ===== CLEAN FULL (sin nulls, historial completo) =====
+          activities_clean_full = remove_nulls(activities)
+          wellness_clean_full = remove_nulls(wellness_ordered)
+
+          # ===== CLEAN 30 DIAS (sin nulls, solo últimos 30 días) =====
+          activities_clean_30 = remove_nulls([
               a for a in activities
               if (a.get("start_date") or "")[:10] >= cutoff
           ])
-
-          wellness_30_clean = remove_nulls([
+          wellness_clean_30 = remove_nulls([
               w for w in wellness_ordered
               if (w.get("id") or "")[:10] >= cutoff
           ])
 
-          # ===== SAVE FILES =====
+          # ===== SAVE: historial completo raw =====
           with open("data/activities_history.json", "w", encoding="utf-8") as f:
               json.dump(activities, f, indent=2, ensure_ascii=False)
 
           with open("data/wellness_history.json", "w", encoding="utf-8") as f:
               json.dump(wellness_ordered, f, indent=2, ensure_ascii=False)
 
+          # ===== SAVE: clean historial completo =====
           with open("data/activities_clean.json", "w", encoding="utf-8") as f:
-              json.dump(activities_30_clean, f, indent=2, ensure_ascii=False)
+              json.dump(activities_clean_full, f, indent=2, ensure_ascii=False)
 
           with open("data/wellness_clean.json", "w", encoding="utf-8") as f:
-              json.dump(wellness_30_clean, f, indent=2, ensure_ascii=False)
+              json.dump(wellness_clean_full, f, indent=2, ensure_ascii=False)
 
-          print(f"✅ Historial completo guardado")
-          print(f"✅ Clean (últimos 30 días desde {cutoff})")
-          print(f"   Activities total: {len(activities)} | clean 30d: {len(activities_30_clean)}")
-          print(f"   Wellness total: {len(wellness_ordered)} | clean 30d: {len(wellness_30_clean)}")
+          # ===== SAVE: clean últimos 30 días =====
+          with open("data/activities_clean_30.json", "w", encoding="utf-8") as f:
+              json.dump(activities_clean_30, f, indent=2, ensure_ascii=False)
+
+          with open("data/wellness_clean_30.json", "w", encoding="utf-8") as f:
+              json.dump(wellness_clean_30, f, indent=2, ensure_ascii=False)
+
+          print(f"✅ Historial completo: {len(activities)} activities | {len(wellness_ordered)} wellness")
+          print(f"✅ Clean 30d (desde {cutoff}): {len(activities_clean_30)} activities | {len(wellness_clean_30)} wellness")
+          print("📁 Archivos generados:")
+          print("   data/activities_history.json  (raw completo)")
+          print("   data/wellness_history.json    (raw completo)")
+          print("   data/activities_clean.json    (sin nulls, completo)")
+          print("   data/wellness_clean.json      (sin nulls, completo)")
+          print("   data/activities_clean_30.json (sin nulls, 30 días)")
+          print("   data/wellness_clean_30.json   (sin nulls, 30 días)")
           EOF
 
       - name: Analyze Performance and Generate Dossier
@@ -130,7 +147,6 @@ jobs:
           with open("data/activities_history.json", "r", encoding="utf-8") as f:
               activities = json.load(f)
           
-          # Fix: usar (a.get("distance") or 0) para evitar None
           runs = [a for a in activities if a.get("type")=="Run" and (a.get("distance") or 0) > 1000]
           if not runs:
               exit(0)
@@ -187,7 +203,8 @@ jobs:
           git add -f \
             ATHLETE_DOSSIER.md TRAINING_PLAN.md \
             data/activities_history.json data/wellness_history.json \
-            data/activities_clean.json data/wellness_clean.json
+            data/activities_clean.json data/wellness_clean.json \
+            data/activities_clean_30.json data/wellness_clean_30.json
           git status
           git diff --cached --stat
           git commit -m "Update training data [skip ci]" || echo "No changes to commit"
