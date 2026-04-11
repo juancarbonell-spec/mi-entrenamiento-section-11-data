@@ -43,10 +43,8 @@ jobs:
               
           os.makedirs("data", exist_ok=True)
 
-          # Todo el historial disponible
           params = {"oldest": "2000-01-01", "newest": datetime.now().strftime("%Y-%m-%d")}
 
-          # ===== REMOVE NULLS FUNCTION =====
           def remove_nulls(obj):
               if isinstance(obj, dict):
                   return {k: remove_nulls(v) for k, v in obj.items() if v is not None}
@@ -88,7 +86,7 @@ jobs:
           # ===== ORDER WELLNESS =====
           wellness_ordered = sorted(wellness, key=lambda x: x.get("id", ""), reverse=True)
 
-          # ===== FILTER LAST 30 DAYS FOR CLEAN FILES =====
+          # ===== FILTER LAST 30 DAYS =====
           cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
           activities_30_clean = remove_nulls([
@@ -173,7 +171,10 @@ jobs:
           with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
               f.write(dossier)
           
-          plan = "# PLAN SEMANAL\n" + "\n".join([f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico" for i in range(7)])
+          plan = "# PLAN SEMANAL\n" + "\n".join([
+              f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aeróbico"
+              for i in range(7)
+          ])
           with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
               f.write(plan)
           EOF
