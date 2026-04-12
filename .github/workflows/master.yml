@@ -1,0 +1,217 @@
+name: Master Sync
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  intervals:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
+      INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Sync Activities and Wellness from Intervals.icu
+        run: |
+          python << 'EOF'
+          import requests, os, json
+          from datetime import datetime, timedelta
+
+          athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
+          api_key = os.environ.get("INTERVALS_API_KEY","").strip()
+          
+          if not athlete_id or not api_key:
+              print("ERROR: Faltan secrets en GitHub Settings")
+              exit(1)
+              
+          os.makedirs("data", exist_ok=True)
+
+          params = {"oldest": "2000-01-01", "newest": datetime.now().strftime("%Y-%m-%d")}
+
+          def remove_nulls(obj):
+              if isinstance(obj, dict):
+                  return {k: remove_nulls(v) for k, v in obj.items() if v is not None}
+              elif isinstance(obj, list):
+                  return [remove_nulls(i) for i in obj if i is not None]
+              else:
+                  return obj
+
+          activities_urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
+              f"https://intervals.icu/api/v1/athlete/0/activities"
+          ]
+          activities = []
+          for url in activities_urls:
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      activities = r.json()
+                      break
+              except Exception:
+                  continue
+
+          wellness_urls = [
+              f"https://intervals.icu/api/v1/athlete/{athlete_id}/wellness",
+              f"https://intervals.icu/api/v1/athlete/0/wellness"
+          ]
+          wellness = []
+          for url in wellness_urls:
+              try:
+                  r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
+                  if r.status_code == 200:
+                      wellness = r.json()
+                      break
+              except Exception:
+                  continue
+
+          wellness_ordered = sorted(wellness, key=lambda x: x.get("id") or "", reverse=True)
+          cutoff_60 = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")
+
+          activities_clean_full = remove_nulls(activities)
+          wellness_clean_full = remove_nulls(wellness_ordered)
+
+          activities_clean_60 = remove_nulls([
+              a for a in activities
+              if (a.get("start_date") or "")[:10] >= cutoff_60
+          ])
+          wellness_clean_60 = remove_nulls([
+              w for w in wellness_ordered
+              if (w.get("id") or "")[:10] >= cutoff_60
+          ])
+
+          with open("data/activities_history.json", "w", encoding="utf-8") as f:
+              json.dump(activities, f, indent=2, ensure_ascii=False)
+          with open("data/wellness_history.json", "w", encoding="utf-8") as f:
+              json.dump(wellness_ordered, f, indent=2, ensure_ascii=False)
+          with open("data/activities_clean.json", "w", encoding="utf-8") as f:
+              json.dump(activities_clean_full, f, indent=2, ensure_ascii=False)
+          with open("data/wellness_clean.json", "w", encoding="utf-8") as f:
+              json.dump(wellness_clean_full, f, indent=2, ensure_ascii=False)
+          with open("data/activities_clean_60.json", "w", encoding="utf-8") as f:
+              json.dump(activities_clean_60, f, indent=2, ensure_ascii=False)
+          with open("data/wellness_clean_60.json", "w", encoding="utf-8") as f:
+              json.dump(wellness_clean_60, f, indent=2, ensure_ascii=False)
+
+          print(f"Historial completo: {len(activities)} activities | {len(wellness_ordered)} wellness")
+          print(f"Clean 60d (desde {cutoff_60}): {len(activities_clean_60)} activities | {len(wellness_clean_60)} wellness")
+          EOF
+
+      - name: Analyze Performance and Generate Dossier
+        run: |
+          python << 'EOF'
+          import os, json
+          from datetime import datetime, timedelta
+          
+          if not os.path.exists("data/activities_history.json"):
+              exit(1)
+              
+          with open("data/activities_history.json", "r", encoding="utf-8") as f:
+              activities = json.load(f)
+          
+          runs = [a for a in activities if a.get("type")=="Run" and (a.get("distance") or 0) > 1000]
+          if not runs:
+              exit(0)
+          
+          runs.sort(key=lambda x: x.get("start_date") or "", reverse=True)
+
+          last = runs[0]
+          if len(runs) > 1:
+              date_0 = (runs[0].get("start_date") or "")[:10]
+              date_1 = (runs[1].get("start_date") or "")[:10]
+              if date_0 == date_1:
+                  last = runs[0] if (runs[0].get("distance") or 0) > (runs[1].get("distance") or 0) else runs[1]
+                  prev = runs[2] if len(runs) > 2 else last
+              else:
+                  prev = runs[1]
+          else:
+              prev = last
+
+          def get_metrics(a):
+              d_km = (a.get("distance") or 0) / 1000
+              t_h = (a.get("moving_time") or 0) / 3600
+              hr = (a.get("average_heartrate") or 0)
+              vvo2max = d_km / t_h if t_h > 0 else 0
+              economy = (d_km * 1000) / (hr * (t_h * 60)) if hr > 0 and t_h > 0 else 0
+              return {"v": vvo2max, "hr": hr, "ec": economy, "dist": d_km}
+
+          m_l = get_metrics(last)
+          m_p = get_metrics(prev)
+
+          dossier = (
+              f"# ATHLETE DOSSIER V8\n\n"
+              f"**Ultima Carrera Analizada:** {(last.get('start_date') or '')[:10]}\n"
+              f"- **vVO2max:** {m_l['v']:.2f} km/h\n"
+              f"- **Distancia:** {m_l['dist']:.2f} km\n"
+              f"- **FC Media:** {m_l['hr']:.0f} ppm\n"
+              f"- **Economia de carrera:** {m_l['ec']:.2f} m/latido\n\n"
+              f"**Progreso:** {'Mejora' if m_l['v'] >= m_p['v'] else 'Estable o Recuperacion'}\n"
+          )
+          with open("ATHLETE_DOSSIER.md", "w", encoding="utf-8") as f:
+              f.write(dossier)
+          
+          plan = "# PLAN SEMANAL\n" + "\n".join([
+              f"- {(datetime.now()+timedelta(days=i)).strftime('%A %d/%m')}: Z2 Aerobico"
+              for i in range(7)
+          ])
+          with open("TRAINING_PLAN.md", "w", encoding="utf-8") as f:
+              f.write(plan)
+          EOF
+
+      - name: Push Intervals results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f ATHLETE_DOSSIER.md TRAINING_PLAN.md data/
+          git diff --cached --quiet || git commit -m "Auto: Intervals.icu sync [skip ci]"
+          git push
+
+  dropbox-fit:
+    runs-on: ubuntu-latest
+    needs: intervals
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install fitdecode pandas numpy requests
+
+      - name: Descargar FIT nuevos desde Dropbox
+        env:
+          DROPBOX_TOKEN: ${{ secrets.DROPBOX_TOKEN }}
+        run: python scripts/sync_dropbox.py
+
+      - name: Procesar FIT y generar CSVs
+        run: python scripts/procesar_fit.py
+
+      - name: Push FIT results
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add FIT/ data/
+          git diff --cached --quiet || git commit -m "Auto: Dropbox FIT sync [skip ci]"
+          git push
