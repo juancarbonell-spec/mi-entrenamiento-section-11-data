@@ -207,7 +207,7 @@ def main():
 
     files = [
         f for f in all_files
-        if (fecha_f := obtener_fecha(f.stem)) and limite <= fecha_f.date() <= hoy.date()
+        if (fecha_f := obtener_fecha(f.stem)) and limite <= fecha_f <= hoy
     ]
 
     print(f"\nVentana: {limite.date()} -> {hoy.date()}  ({VENTANA_DIAS} dias)")
