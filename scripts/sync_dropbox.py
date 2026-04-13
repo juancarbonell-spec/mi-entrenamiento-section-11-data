@@ -2,7 +2,12 @@
 sync_dropbox.py
 ===============
 Descarga desde Dropbox los .fit nuevos que aún no están en FIT/ del repo.
-El token viene del Secret DROPBOX_TOKEN de GitHub.
+Usa OAuth2 con refresh token para acceso permanente (sin caducidad).
+
+Secrets necesarios en GitHub:
+  - DROPBOX_REFRESH_TOKEN
+  - DROPBOX_APP_KEY
+  - DROPBOX_APP_SECRET
 
 Dependencias: requests (sin librerías extra)
 """
@@ -15,6 +20,21 @@ from pathlib import Path
 DROPBOX_FOLDER = "/fit"       # ruta en Dropbox (en minúsculas)
 LOCAL_FIT_DIR  = Path("FIT")
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+def obtener_access_token(refresh_token: str, app_key: str, app_secret: str) -> str:
+    """Intercambia el refresh token por un access token válido (~4h)."""
+    r = requests.post(
+        "https://api.dropbox.com/oauth2/token",
+        data={
+            "grant_type":    "refresh_token",
+            "refresh_token": refresh_token,
+        },
+        auth=(app_key, app_secret),
+    )
+    if r.status_code != 200:
+        raise Exception(f"Error obteniendo access token: {r.status_code} {r.text}")
+    return r.json()["access_token"]
 
 
 def listar_fits(token: str) -> list[dict]:
@@ -35,7 +55,7 @@ def listar_fits(token: str) -> list[dict]:
 
 
 def descargar_fit(token: str, path_dropbox: str, dest: Path):
-    """Descarga un archivo de Dropbox."""
+    """Descarga un archivo .fit de Dropbox."""
     headers = {
         "Authorization":   f"Bearer {token}",
         "Dropbox-API-Arg": f'{{"path": "{path_dropbox}"}}',
@@ -54,9 +74,21 @@ def descargar_fit(token: str, path_dropbox: str, dest: Path):
 
 
 def main():
-    token = os.environ.get("DROPBOX_TOKEN")
-    if not token:
-        raise EnvironmentError("Secret DROPBOX_TOKEN no encontrado.")
+    # Leer secrets
+    refresh_token = os.environ.get("DROPBOX_REFRESH_TOKEN")
+    app_key       = os.environ.get("DROPBOX_APP_KEY")
+    app_secret    = os.environ.get("DROPBOX_APP_SECRET")
+
+    if not all([refresh_token, app_key, app_secret]):
+        raise EnvironmentError(
+            "Faltan secrets. Asegúrate de definir DROPBOX_REFRESH_TOKEN, "
+            "DROPBOX_APP_KEY y DROPBOX_APP_SECRET."
+        )
+
+    # Obtener access token fresco
+    print("Obteniendo access token de Dropbox...")
+    token = obtener_access_token(refresh_token, app_key, app_secret)
+    print("Access token OK.")
 
     LOCAL_FIT_DIR.mkdir(exist_ok=True)
 
