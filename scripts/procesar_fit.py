@@ -12,15 +12,15 @@ import numpy as np
 CARPETA_FIT = Path("FIT")
 DATA_DIR    = Path("data")
 
-CSV_FULL_RUN        = DATA_DIR / "running_60d_full.csv"
-CSV_SUMMARY_RUN     = DATA_DIR / "running_60d_summary.csv"
+CSV_FULL_RUN        = DATA_DIR / "running_30d_full.csv"
+CSV_SUMMARY_RUN     = DATA_DIR / "running_30d_summary.csv"
 TXT_COMPARACION_RUN = DATA_DIR / "running_comparacion.txt"
 
-CSV_FULL_CYC        = DATA_DIR / "cycling_60d_full.csv"
-CSV_SUMMARY_CYC     = DATA_DIR / "cycling_60d_summary.csv"
+CSV_FULL_CYC        = DATA_DIR / "cycling_30d_full.csv"
+CSV_SUMMARY_CYC     = DATA_DIR / "cycling_30d_summary.csv"
 TXT_COMPARACION_CYC = DATA_DIR / "cycling_comparacion.txt"
 
-VENTANA_DIAS     = 60
+VENTANA_DIAS     = 30
 DEPORTES_VALIDOS = {"running", "cycling"}
 
 # ---------- FECHA ----------
