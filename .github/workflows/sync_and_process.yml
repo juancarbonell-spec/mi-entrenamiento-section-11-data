@@ -27,7 +27,9 @@ jobs:
 
       - name: Descargar FIT nuevos desde Dropbox
         env:
-          DROPBOX_TOKEN: ${{ secrets.DROPBOX_TOKEN }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
         run: python scripts/sync_dropbox.py
 
       - name: Procesar FIT y generar CSVs
