@@ -1,26 +1,27 @@
 [
   {
     "id": "2026-04-14",
-    "ctl": 39.20951,
-    "atl": 31.16576,
-    "rampRate": -2.082695,
-    "ctlLoad": 0.0,
-    "atlLoad": 0.0,
+    "ctl": 40.715324,
+    "atl": 39.685574,
+    "rampRate": -0.5768814,
+    "ctlLoad": 64.0,
+    "atlLoad": 64.0,
     "sportInfo": [
       {
         "type": "Ride"
       }
     ],
-    "updated": "2026-04-14T05:46:08.897+00:00",
+    "updated": "2026-04-14T07:28:44.789+00:00",
     "restingHR": 40,
     "hrv": 52.0,
     "sleepSecs": 24180,
     "sleepScore": 77.0,
     "sleepQuality": 3,
     "spO2": 96.0,
-    "steps": 70,
-    "respiration": 10.616667,
-    "tempWeight": false,
+    "vo2max": 47.0,
+    "steps": 11145,
+    "respiration": 33.566666,
+    "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 100,
     "BodyBatteryMin": 63
