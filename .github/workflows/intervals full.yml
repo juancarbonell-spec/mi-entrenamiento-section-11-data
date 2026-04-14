@@ -8,8 +8,6 @@ on:
         required: true
         default: '7'
         type: string
-  # schedule:
-  #   - cron: '0 5 * * *'
 
 jobs:
   sync-analytics:
@@ -42,7 +40,7 @@ jobs:
           import numpy as np
           from scipy import stats
 
-          # CONFIGURACIÓN DE ZONAS DE JUAN (de memoria)
+          # CONFIGURACION DE ZONAS DE JUAN (de memoria)
           ZONAS_FC = {
               'Z1_recuperacion': (106, 126),
               'Z2_aerobico': (127, 140),
@@ -63,26 +61,25 @@ jobs:
           api_key = os.environ.get("INTERVALS_API_KEY", "").strip()
           
           if not athlete_id or not api_key:
-              print("❌ ERROR: Faltan secrets")
+              print("ERROR: Faltan secrets")
               exit(1)
           
           days_back = int(os.environ.get("DAYS_BACK", "7"))
           if days_back > 30:
-              print("⚠️ Limitando a 30 días para no saturar API")
+              print("Advertencia: Limitando a 30 dias para no saturar API")
               days_back = 30
           
           os.makedirs("data", exist_ok=True)
           
           cutoff_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
-          print(f"📅 Descargando desde: {cutoff_date}")
+          print(f"Descargando desde: {cutoff_date}")
 
           def calculate_np(power_values):
-              """Normalized Power: media móvil 30s elevada a 4, luego raíz 4"""
+              """Normalized Power: media movil 30s elevada a 4, luego raiz 4"""
               if not power_values or len(power_values) < 30:
                   return round(np.mean(power_values), 1) if power_values else None
               
               s = pd.Series(power_values)
-              # Asumiendo datos cada ~1-5 segundos, ventana de 6 = ~30s
               window = min(6, len(s) // 4)
               if window < 2:
                   return round(s.mean(), 1)
@@ -91,16 +88,13 @@ jobs:
               return round((rolling ** 4).mean() ** 0.25, 1)
 
           def calculate_variability_index(avg_power, np_power):
-              """VI = NP / AvgPower (indica variabilidad del esfuerzo)"""
+              """VI = NP / AvgPower"""
               if avg_power and np_power and avg_power > 0:
                   return round(np_power / avg_power, 2)
               return None
 
           def calculate_decoupling(df):
-              """
-              Decoupling aerobic: % de aumento en ratio FC/velocidad 
-              entre primera y segunda mitad
-              """
+              """Decoupling aerobic: % de aumento en ratio FC/velocidad"""
               if len(df) < 20 or 'hr' not in df.columns or 'speed' not in df.columns:
                   return None
               
@@ -108,7 +102,6 @@ jobs:
               first = df.iloc[:mid]
               second = df.iloc[mid:]
               
-              # Ratio FC/velocidad (cuántos latidos por metro)
               first_ratio = first['hr'].mean() / first['speed'].mean() if first['speed'].mean() > 0 else 0
               second_ratio = second['hr'].mean() / second['speed'].mean() if second['speed'].mean() > 0 else 0
               
@@ -117,7 +110,7 @@ jobs:
               return None
 
           def calculate_efficiency_factor(df):
-              """EF = NP / FC media (para ciclismo) o Velocidad/FC (para running)"""
+              """EF = NP / FC media o Velocidad/FC"""
               if 'power' in df.columns and 'hr' in df.columns:
                   avg_power = df['power'].mean()
                   avg_hr = df['hr'].mean()
@@ -127,7 +120,7 @@ jobs:
                   avg_speed = df['speed'].mean()
                   avg_hr = df['hr'].mean()
                   if avg_hr > 0:
-                      return round((avg_speed * 60) / avg_hr, 2)  # m/min por latido
+                      return round((avg_speed * 60) / avg_hr, 2)
               return None
 
           def calculate_time_in_zones(series, zones_dict):
@@ -142,23 +135,19 @@ jobs:
               return time_zones
 
           def calculate_aerobic_efficiency(df):
-              """
-              Eficiencia aeróbica: relación entre velocidad y FC
-              Cuántos metros avanzas por cada latido
-              """
+              """Eficiencia aerobica: metros avanzados por cada latido"""
               if 'speed' not in df.columns or 'hr' not in df.columns:
                   return None
               
-              # m/s / (latidos/s) = m/latido
-            avg_speed = df['speed'].mean()
+              avg_speed = df['speed'].mean()
               avg_hr = df['hr'].mean()
               
               if avg_hr > 0:
-                  return round((avg_speed * 60) / avg_hr, 2)  # metros por latido
+                  return round((avg_speed * 60) / avg_hr, 2)
               return None
 
           def calculate_cadence_variability(df):
-              """Coeficiente de variación de cadencia (estabilidad)"""
+              """Coeficiente de variacion de cadencia"""
               if 'cadence' not in df.columns or df['cadence'].mean() == 0:
                   return None
               
@@ -166,14 +155,12 @@ jobs:
               return round(cv, 1)
 
           def calculate_stride_metrics(df):
-              """Métricas de zancada para running"""
+              """Metricas de zancada para running"""
               if 'speed' not in df.columns or 'cadence' not in df.columns:
                   return None
               
-              # Zancada estimada (m) = velocidad (m/s) / (cadencia/60) (pasos/s)
-              # Solo si no tenemos stride_length directo
               if 'stride_length' not in df.columns:
-                  cadence_hz = df['cadence'] / 60  # pasos por segundo
+                  cadence_hz = df['cadence'] / 60
                   stride_estimated = df['speed'] / cadence_hz.replace(0, np.nan)
                   return {
                       'stride_length_estimated_m': round(stride_estimated.mean(), 2),
@@ -182,7 +169,7 @@ jobs:
               return None
 
           def calculate_power_balance(df):
-              """Análisis de distribución de potencia (ciclismo)"""
+              """Analisis de distribucion de potencia"""
               if 'power' not in df.columns:
                   return None
               
@@ -197,20 +184,16 @@ jobs:
                   'power_quartile_25': round(power.quantile(0.25), 1),
                   'power_quartile_50': round(power.quantile(0.50), 1),
                   'power_quartile_75': round(power.quantile(0.75), 1),
-                  'power_skewness': round(power.skew(), 2)  # Asimetría de la distribución
+                  'power_skewness': round(power.skew(), 2)
               }
 
           def process_all_metrics(streams, act_type):
-              """
-              Procesa TODAS las métricas disponibles y calculadas
-              """
+              """Procesa TODAS las metricas disponibles y calculadas"""
               if not streams or "time" not in streams:
                   return None, 0
               
-              # Crear DataFrame con todos los campos posibles
               df = pd.DataFrame({"time": streams.get("time", [])})
               
-              # Mapear campos de la API
               field_map = {
                   "heartrate": "hr",
                   "cadence": "cadence", 
@@ -240,67 +223,48 @@ jobs:
               df["minute"] = (df["time"] // 60).astype(int)
               total_minutes = int(df["minute"].max()) + 1
               
-              # === MÉTRICAS GLOBALES DE LA ACTIVIDAD ===
+              # METRICAS GLOBALES
               global_metrics = {
                   "total_records": len(df),
                   "duration_seconds": int(df["time"].max()),
                   "duration_minutes": total_minutes,
                   "data_frequency_hz": round(len(df) / df["time"].max(), 2) if df["time"].max() > 0 else 0,
-                  
-                  # FC
                   "hr_avg": round(df["hr"].mean(), 1) if "hr" in df else None,
                   "hr_max": int(df["hr"].max()) if "hr" in df else None,
                   "hr_min": int(df["hr"].min()) if "hr" in df else None,
                   "hr_std": round(df["hr"].std(), 2) if "hr" in df else None,
                   "hr_time_in_zones": calculate_time_in_zones(df.get("hr"), ZONAS_FC),
-                  
-                  # Cadencia
                   "cadence_avg": round(df["cadence"].mean(), 1) if "cadence" in df else None,
                   "cadence_max": int(df["cadence"].max()) if "cadence" in df else None,
                   "cadence_variability_cv": calculate_cadence_variability(df),
-                  
-                  # Velocidad
                   "speed_avg_ms": round(df["speed"].mean(), 2) if "speed" in df else None,
                   "speed_max_ms": round(df["speed"].max(), 2) if "speed" in df else None,
                   "speed_std": round(df["speed"].std(), 2) if "speed" in df else None,
-                  
-                  # Potencia (ciclismo)
                   "power_avg": round(df["power"].mean(), 1) if "power" in df else None,
                   "power_max": int(df["power"].max()) if "power" in df else None,
                   "power_normalized": calculate_np(df["power"].tolist()) if "power" in df else None,
                   "power_time_in_zones": calculate_time_in_zones(df.get("power"), ZONAS_POTENCIA) if "power" in df else None,
                   "power_distribution": calculate_power_balance(df) if "power" in df else None,
-                  
-                  # Elevación
                   "elevation_gain_m": round(df["altitude"].max() - df["altitude"].min(), 1) if "altitude" in df else None,
                   "grade_avg": round(df["grade"].mean(), 2) if "grade" in df else None,
                   "grade_max": round(df["grade"].max(), 1) if "grade" in df else None,
                   "grade_min": round(df["grade"].min(), 1) if "grade" in df else None,
-                  
-                  # Temperatura
                   "temp_avg": round(df["temperature"].mean(), 1) if "temperature" in df else None,
-                  
-                  # Running específico
                   "ground_time_avg_ms": round(df["ground_time"].mean(), 1) if "ground_time" in df else None,
                   "vert_osc_avg_cm": round(df["vert_osc"].mean(), 2) if "vert_osc" in df else None,
                   "stride_length_avg_m": round(df["stride_length"].mean(), 2) if "stride_length" in df else None,
                   "stance_balance_avg": round(df["stance_balance"].mean(), 1) if "stance_balance" in df else None,
-                  
-                  # MÉTRICAS CALCULADAS (clave para análisis)
                   "aerobic_efficiency_m_per_beat": calculate_aerobic_efficiency(df),
                   "efficiency_factor": calculate_efficiency_factor(df),
                   "decoupling_percent": calculate_decoupling(df),
                   "stride_metrics": calculate_stride_metrics(df),
-                  
-                  # Correlaciones
                   "cadence_speed_correlation": round(df["cadence"].corr(df["speed"]), 3) if "cadence" in df and "speed" in df else None,
                   "hr_power_correlation": round(df["hr"].corr(df["power"]), 3) if "hr" in df and "power" in df else None,
               }
               
-              # Limpiar None
               global_metrics = {k: v for k, v in global_metrics.items() if v is not None}
               
-              # === MÉTRICAS POR MINUTO ===
+              # METRICAS POR MINUTO
               minute_records = []
               
               for minute_num in range(total_minutes):
@@ -311,32 +275,32 @@ jobs:
                   
                   record = {"minute": minute_num}
                   
-                  # FC
                   if "hr" in minute_df:
                       record["hr_avg"] = round(minute_df["hr"].mean(), 1)
                       record["hr_max"] = int(minute_df["hr"].max())
                       record["hr_min"] = int(minute_df["hr"].min())
                   
-                  # Cadencia
                   if "cadence" in minute_df:
                       record["cadence_avg"] = round(minute_df["cadence"].mean(), 1)
                       record["cadence_max"] = int(minute_df["cadence"].max())
-                      record["cadence_stability"] = round(100 - ((minute_df["cadence"].std() / minute_df["cadence"].mean()) * 100), 1) if minute_df["cadence"].mean() > 0 else 100
+                      if minute_df["cadence"].mean() > 0:
+                          stability = 100 - ((minute_df["cadence"].std() / minute_df["cadence"].mean()) * 100)
+                          record["cadence_stability"] = round(stability, 1)
                   
-                  # Velocidad
                   if "speed" in minute_df:
                       record["speed_avg"] = round(minute_df["speed"].mean(), 2)
                       record["speed_max"] = round(minute_df["speed"].max(), 2)
-                      record["pace_min_km"] = round(16.6667 / minute_df["speed"].mean(), 2) if minute_df["speed"].mean() > 0 else None
+                      if minute_df["speed"].mean() > 0:
+                          record["pace_min_km"] = round(16.6667 / minute_df["speed"].mean(), 2)
                   
-                  # Potencia
                   if "power" in minute_df:
                       record["power_avg"] = round(minute_df["power"].mean(), 1)
                       record["power_max"] = int(minute_df["power"].max())
                       record["power_np"] = calculate_np(minute_df["power"].tolist())
-                      record["power_variability"] = round((minute_df["power"].std() / minute_df["power"].mean()) * 100, 1) if minute_df["power"].mean() > 0 else 0
+                      if minute_df["power"].mean() > 0:
+                          var = (minute_df["power"].std() / minute_df["power"].mean()) * 100
+                          record["power_variability"] = round(var, 1)
                   
-                  # Altitud y pendiente
                   if "altitude" in minute_df:
                       record["altitude_avg"] = round(minute_df["altitude"].mean(), 1)
                       record["elevation_change_m"] = round(minute_df["altitude"].max() - minute_df["altitude"].min(), 1)
@@ -344,7 +308,6 @@ jobs:
                   if "grade" in minute_df:
                       record["grade_avg"] = round(minute_df["grade"].mean(), 1)
                   
-                  # Running específico por minuto
                   if "ground_time" in minute_df:
                       record["ground_time_avg"] = round(minute_df["ground_time"].mean(), 1)
                   if "vert_osc" in minute_df:
@@ -354,7 +317,6 @@ jobs:
                   if "stance_balance" in minute_df:
                       record["stance_balance_avg"] = round(minute_df["stance_balance"].mean(), 1)
                   
-                  # Zonas de FC en este minuto específico
                   if "hr" in minute_df:
                       hr_mean = minute_df["hr"].mean()
                       for zone_name, (min_z, max_z) in ZONAS_FC.items():
@@ -362,9 +324,7 @@ jobs:
                               record["zone"] = zone_name
                               break
                   
-                  # Muestras en este minuto
                   record["samples"] = len(minute_df)
-                  
                   minute_records.append(record)
               
               return {
@@ -373,17 +333,16 @@ jobs:
                   "available_fields": available_fields
               }, total_minutes
 
-          # ===== DESCARGAR ACTIVIDADES =====
+          # DESCARGAR ACTIVIDADES
           url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities"
           params = {"oldest": cutoff_date, "newest": datetime.now().strftime("%Y-%m-%d"), "limit": 100}
           
           r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
           activities = r.json()
-          print(f"📊 {len(activities)} actividades encontradas")
+          print(f"{len(activities)} actividades encontradas")
 
           running_data = []
           cycling_data = []
-          other_data = []
 
           for idx, activity in enumerate(activities, 1):
               act_id = activity.get("id")
@@ -392,11 +351,10 @@ jobs:
               if not act_id or act_type not in ["Run", "Ride"]:
                   continue
               
-              print(f"\n[{idx}] {act_type} - {activity.get('start_date', '')[:10]}")
+              print(f"[{idx}] {act_type} - {activity.get('start_date', '')[:10]}")
               time.sleep(0.3)
               
               try:
-                  # Streams
                   streams_url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities/{act_id}/streams"
                   r_streams = requests.get(streams_url, auth=("API_KEY", api_key), timeout=60)
                   
@@ -409,15 +367,12 @@ jobs:
                   if not metrics_data:
                       continue
                   
-                  # Construir objeto completo
                   activity_obj = {
                       "id": act_id,
                       "name": activity.get("name"),
                       "type": act_type,
                       "date": activity.get("start_date"),
                       "intervals_icu_url": f"https://intervals.icu/activities/{act_id}",
-                      
-                      # Resumen intervals.icu
                       "summary": {
                           "distance_m": activity.get("distance"),
                           "moving_time_s": activity.get("moving_time"),
@@ -426,8 +381,6 @@ jobs:
                           "feel": activity.get("feel"),
                           "rpe": activity.get("rpe")
                       },
-                      
-                      # Métricas calculadas
                       "analytics": metrics_data["global_metrics"],
                       "minute_data": metrics_data["minute_by_minute"],
                       "fields_available": metrics_data["available_fields"]
@@ -435,16 +388,18 @@ jobs:
                   
                   if act_type == "Run":
                       running_data.append(activity_obj)
-                      print(f"   ✅ Running: {total_mins} min, EF={activity_obj['analytics'].get('aerobic_efficiency_m_per_beat')} m/beat")
+                      ef = activity_obj['analytics'].get('aerobic_efficiency_m_per_beat')
+                      print(f"  Running: {total_mins}min, EF={ef}")
                   else:
                       cycling_data.append(activity_obj)
-                      print(f"   ✅ Cycling: {total_mins} min, NP={activity_obj['analytics'].get('power_normalized')} W")
+                      np_val = activity_obj['analytics'].get('power_normalized')
+                      print(f"  Cycling: {total_mins}min, NP={np_val}")
                       
               except Exception as e:
-                  print(f"   ❌ Error: {e}")
+                  print(f"  Error: {e}")
 
-          # ===== GUARDAR =====
-          print(f"\n💾 Guardando...")
+          # GUARDAR
+          print("Guardando...")
           
           output = {
               "generated_at": datetime.now().isoformat(),
@@ -457,15 +412,13 @@ jobs:
           with open("data/training_analytics.json", "w", encoding="utf-8") as f:
               json.dump(output, f, indent=2, ensure_ascii=False)
           
-          # También separados para fácil acceso
           with open("data/running_analytics.json", "w", encoding="utf-8") as f:
               json.dump({"generated_at": datetime.now().isoformat(), "activities": running_data}, f, indent=2)
           
           with open("data/cycling_analytics.json", "w", encoding="utf-8") as f:
               json.dump({"generated_at": datetime.now().isoformat(), "activities": cycling_data}, f, indent=2)
           
-          print(f"✅ Running: {len(running_data)} | Cycling: {len(cycling_data)}")
-          print(f"📁 Archivo principal: data/training_analytics.json")
+          print(f"Running: {len(running_data)} | Cycling: {len(cycling_data)}")
           EOF
         env:
           DAYS_BACK: ${{ github.event.inputs.days_back || '7' }}
