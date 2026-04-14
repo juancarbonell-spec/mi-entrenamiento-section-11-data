@@ -1,73 +1,63 @@
-name: Sync Detailed Streams - Debug
+name: Sync Detailed Minute-by-Minute Data
 
 on:
   workflow_dispatch:
     inputs:
       days_back:
-        description: 'Dias atras'
-        default: '7'
+        description: 'Cuantos dias atras (1=hoy, 2=ayer+hoy, etc)'
+        default: '3'
         type: string
 
 jobs:
-  sync:
+  sync-streams:
     runs-on: ubuntu-latest
+    
     env:
       INTERVALS_API_KEY: ${{ secrets.INTERVALS_ICU_API_KEY }}
       INTERVALS_ATHLETE_ID: ${{ secrets.INTERVALS_ICU_ID }}
 
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install requests pandas
+          python -m pip install --upgrade pip
+          pip install requests pandas numpy
 
-      - name: Download and Process
+      - name: Download Minute-by-Minute Streams
         run: |
-          python3 << 'PYEOF'
-          import sys
-          import subprocess
-          
-          # Verificar que requests esté instalado
-          try:
-              import requests
-              import pandas as pd
-              import numpy as np
-              from datetime import datetime, timedelta
-              import json
-              import os
-              import time
-          except ImportError as e:
-              print(f"Error importando: {e}")
-              subprocess.check_call([sys.executable, "-m", "pip", "install", "requests", "pandas", "numpy"])
-              import requests
-              import pandas as pd
-              import numpy as np
-              from datetime import datetime, timedelta
-              import json
-              import os
-              import time
+          python3 << 'PYSCRIPT'
+          import requests
+          import pandas as pd
+          import numpy as np
+          from datetime import datetime, timedelta
+          import json
+          import os
+          import time
 
           athlete_id = os.environ.get("INTERVALS_ATHLETE_ID", "").strip()
           api_key = os.environ.get("INTERVALS_API_KEY", "").strip()
+          days_back = int(os.environ.get("DAYS_BACK", "3"))
           
-          days_back = int(os.environ.get("DAYS_BACK", "7"))
+          if not athlete_id or not api_key:
+              print("ERROR: Faltan secrets")
+              exit(1)
+          
+          os.makedirs("data", exist_ok=True)
+          
+          # Fecha de corte
           cutoff = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+          print(f"Buscando actividades desde: {cutoff}")
+
+          # 1. DESCARGAR LISTA DE ACTIVIDADES (mismo metodo que tu script original)
+          params = {"oldest": "2000-01-01", "newest": datetime.now().strftime("%Y-%m-%d")}
           
-          print(f"Athlete: {athlete_id}")
-          print(f"Buscando desde: {cutoff}")
-
-          # Igual que tu sync.yml original pero con limit=1000 para traer TODO
-          params = {
-              "oldest": "2000-01-01", 
-              "newest": datetime.now().strftime("%Y-%m-%d"),
-              "limit": 1000  # <-- IMPORTANTE: Pedir muchas para no quedarnos con las viejas
-          }
-
           activities = []
           urls = [
               f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
@@ -77,134 +67,154 @@ jobs:
           for url in urls:
               try:
                   r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
-                  print(f"Status: {r.status_code} desde {url}")
                   if r.status_code == 200:
                       data = r.json()
                       if isinstance(data, list):
                           activities = data
-                          print(f"Recibidas {len(activities)} actividades")
+                          print(f"OK: {len(activities)} actividades descargadas")
                           break
               except Exception as e:
-                  print(f"Error: {e}")
+                  print(f"Error en {url}: {e}")
 
           if not activities:
               print("No se recibieron actividades")
               exit(1)
 
-          # DEBUG: Mostrar TODAS las fechas recibidas (primeras 20)
-          print("\n=== ACTIVIDADES RECIBIDAS (primeras 20) ===")
-          for i, a in enumerate(activities[:20]):
-              if isinstance(a, dict):
-                  print(f"{i+1}. {a.get('type')} | {a.get('start_date', 'N/A')[:10]} | {a.get('name', 'N/A')[:30]}")
-
-          # Filtrar por fecha
+          # 2. FILTRAR RUN/RIDE RECIENTES
           recent = []
           for a in activities:
               if not isinstance(a, dict):
                   continue
+              if a.get("type") not in ["Run", "Ride"]:
+                  continue
               date = (a.get("start_date") or "")[:10]
-              if date >= cutoff and a.get("type") in ["Run", "Ride"]:
+              if date >= cutoff:
                   recent.append(a)
 
-          print(f"\n=== ACTIVIDADES RECIENTES (>{cutoff}): {len(recent)} ===")
-          for a in recent:
-              print(f"- {a.get('type')} {a.get('start_date')[:10]} {a.get('name')[:40]}")
-
+          print(f"Actividades Run/Ride recientes: {len(recent)}")
+          
           if not recent:
-              print("ERROR: No hay actividades recientes. Verifica que tu athlete_id sea correcto.")
+              print("No hay actividades recientes para procesar")
               exit(0)
 
-          # Procesar solo las 5 más recientes
+          # 3. DESCARGAR STREAMS MINUTO A MINUTO
           running = []
           cycling = []
 
-          for idx, act in enumerate(recent[:5], 1):
+          for idx, act in enumerate(recent[:10], 1):  # Max 10 para no saturar
               aid = act.get("id")
               atype = act.get("type")
+              aname = act.get("name", "")
               adate = act.get("start_date", "")[:10]
               
-              print(f"\n[{idx}] Procesando {atype} {adate}...")
-              time.sleep(0.5)
+              print(f"\n[{idx}] {atype} {adate} - {aname[:30]}...")
+              time.sleep(0.4)
               
               try:
-                  url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities/{aid}/streams"
-                  r = requests.get(url, auth=("API_KEY", api_key), timeout=60)
+                  # Descargar streams detallados
+                  stream_url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities/{aid}/streams"
+                  r = requests.get(stream_url, auth=("API_KEY", api_key), timeout=60)
                   
+                  if r.status_code == 404:
+                      print("   No tiene streams detallados")
+                      continue
                   if r.status_code != 200:
-                      print(f"  Skip: HTTP {r.status_code}")
+                      print(f"   Error HTTP {r.status_code}")
                       continue
                   
                   streams = r.json()
                   if not streams or "time" not in streams:
-                      print(f"  Skip: Sin datos de tiempo")
                       continue
                   
-                  # Crear DataFrame simple
-                  df = pd.DataFrame({"t": streams["time"]})
+                  # Crear DataFrame con TODOS los datos segundo a segundo
+                  df = pd.DataFrame({"time": streams["time"]})
                   
                   if "heartrate" in streams:
                       df["hr"] = streams["heartrate"]
                   if "cadence" in streams:
-                      df["cad"] = streams["cadence"]
+                      df["cadence"] = streams["cadence"]
                   if "watts" in streams:
-                      df["pwr"] = streams["watts"]
+                      df["power"] = streams["watts"]
                   if "velocity_smooth" in streams:
-                      df["spd"] = streams["velocity_smooth"]
+                      df["speed"] = streams["velocity_smooth"]
+                  if "altitude" in streams:
+                      df["altitude"] = streams["altitude"]
+                  if "ground_time" in streams:
+                      df["ground_time"] = streams["ground_time"]
+                  if "vertical_oscillation" in streams:
+                      df["vert_osc"] = streams["vertical_oscillation"]
                   
-                  df["min"] = (df["t"] // 60).astype(int)
+                  df = df.replace({None: np.nan})
                   
-                  # Agrupar por minuto
-                  mins = []
-                  for m, group in df.groupby("min"):
-                      record = {"minute": int(m)}
+                  # Agrupar por MINUTO
+                  df["minute"] = (df["time"] // 60).astype(int)
+                  
+                  minutes_data = []
+                  for minute_num, group in df.groupby("minute"):
+                      record = {"minute": int(minute_num)}
+                      
                       if "hr" in group:
-                          record["hr"] = round(group["hr"].mean(), 1)
-                      if "cad" in group:
-                          record["cad"] = round(group["cad"].mean(), 1)
-                      if "pwr" in group:
-                          record["pwr"] = round(group["pwr"].mean(), 1)
-                      if "spd" in group:
-                          record["spd"] = round(group["spd"].mean(), 2)
-                      mins.append(record)
+                          record["hr_avg"] = round(group["hr"].mean(), 1)
+                          record["hr_max"] = int(group["hr"].max())
+                      if "cadence" in group:
+                          record["cadence_avg"] = round(group["cadence"].mean(), 1)
+                      if "power" in group:
+                          record["power_avg"] = round(group["power"].mean(), 1)
+                          record["power_max"] = int(group["power"].max())
+                      if "speed" in group:
+                          record["speed_avg"] = round(group["speed"].mean(), 2)
+                          if group["speed"].mean() > 0:
+                              record["pace_min_km"] = round(16.6667 / group["speed"].mean(), 2)
+                      if "ground_time" in group:
+                          record["ground_time_ms"] = round(group["ground_time"].mean(), 1)
+                      if "vert_osc" in group:
+                          record["vert_osc_cm"] = round(group["vert_osc"].mean(), 2)
+                      
+                      minutes_data.append(record)
                   
-                  obj = {
+                  activity_obj = {
                       "id": aid,
                       "date": act.get("start_date"),
                       "type": atype,
-                      "name": act.get("name"),
-                      "minutes": len(mins),
-                      "data": mins
+                      "name": aname,
+                      "total_minutes": len(minutes_data),
+                      "summary": {
+                          "distance_m": act.get("distance"),
+                          "moving_time_s": act.get("moving_time"),
+                          "tss": act.get("tss")
+                      },
+                      "minute_by_minute": minutes_data
                   }
                   
                   if atype == "Run":
-                      running.append(obj)
-                      print(f"  ✓ Running: {len(mins)} min")
+                      running.append(activity_obj)
+                      print(f"   OK Running: {len(minutes_data)} minutos")
                   else:
-                      cycling.append(obj)
-                      print(f"  ✓ Cycling: {len(mins)} min")
+                      cycling.append(activity_obj)
+                      print(f"   OK Cycling: {len(minutes_data)} minutos")
                       
               except Exception as e:
-                  print(f"  Error: {e}")
+                  print(f"   Error: {e}")
 
-          # Guardar
-          import os
-          os.makedirs("data", exist_ok=True)
+          # 4. GUARDAR
+          result = {
+              "generated": datetime.now().isoformat(),
+              "running": running,
+              "cycling": cycling
+          }
           
-          with open("data/running_detailed.json", "w") as f:
-              json.dump({"count": len(running), "activities": running}, f, indent=2)
+          with open("data/minute_by_minute.json", "w", encoding="utf-8") as f:
+              json.dump(result, f, indent=2)
           
-          with open("data/cycling_detailed.json", "w") as f:
-              json.dump({"count": len(cycling), "activities": cycling}, f, indent=2)
-          
-          print(f"\nGuardado: {len(running)} running, {len(cycling)} cycling")
-          PYEOF
+          print(f"\n✅ Guardado: {len(running)} running, {len(cycling)} cycling")
+          PYSCRIPT
         env:
           DAYS_BACK: ${{ github.event.inputs.days_back }}
 
       - name: Push
         run: |
-          git config user.email "action@github.com"
-          git config user.name "GitHub Action"
-          git add -f data/*.json
-          git commit -m "Update streams [skip ci]" || echo "No changes"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -f data/minute_by_minute.json
+          git commit -m "Add minute-by-minute data [skip ci]" || echo "No changes"
           git push
