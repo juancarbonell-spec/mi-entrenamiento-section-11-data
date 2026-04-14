@@ -1,12 +1,17 @@
-name: Sync Detailed Streams (Full Metrics)
+name: Sync Detailed Streams - All Recent
 
 on:
   workflow_dispatch:
     inputs:
       days_back:
-        description: 'Dias hacia atras'
+        description: 'Cuantos dias atras (incluyendo hoy)'
         required: true
-        default: '7'
+        default: '5'
+        type: string
+      max_activities:
+        description: 'Maximo actividades a procesar (para no saturar API)'
+        required: true
+        default: '10'
         type: string
 
 jobs:
@@ -26,11 +31,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests pandas numpy
-
       - name: Sync Detailed Streams
         run: |
           python << 'EOF'
@@ -41,41 +41,21 @@ jobs:
 
           athlete_id = os.environ.get("INTERVALS_ATHLETE_ID","").strip()
           api_key = os.environ.get("INTERVALS_API_KEY","").strip()
+          days_back = int(os.environ.get("DAYS_BACK", "5"))
+          max_acts = int(os.environ.get("MAX_ACTIVITIES", "10"))
           
-          if not athlete_id or not api_key:
-              print("ERROR: Faltan secrets")
-              exit(1)
-              
           os.makedirs("data", exist_ok=True)
 
-          days_back = int(os.environ.get("DAYS_BACK", "7"))
-          cutoff_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+          # Fechas de corte
+          today = datetime.now().date()
+          cutoff_date = today - timedelta(days=days_back)
           
-          print(f"Descargando desde: {cutoff_date}")
-          print(f"Athlete ID: {athlete_id}")
+          print(f"=== CONFIGURACION ===")
+          print(f"Hoy: {today}")
+          print(f"Buscando desde: {cutoff_date} (hace {days_back} dias)")
+          print(f"Max actividades a procesar: {max_acts}")
 
-          # EXACTAMENTE IGUAL QUE EL SCRIPT ORIGINAL
-          params = {"oldest": cutoff_date, "newest": datetime.now().strftime("%Y-%m-%d"), "limit": 100}
-
-          # Funciones de calculo
-          def calc_np(vals):
-              if not vals or len(vals) < 10:
-                  return None
-              s = pd.Series(vals).dropna()
-              if len(s) < 10:
-                  return round(s.mean(), 1)
-              window = max(2, len(s) // 20)
-              rolling = s.rolling(window=window, min_periods=1).mean()
-              return round((rolling ** 4).mean() ** 0.25, 1)
-
-          def calc_zones(series, zones):
-              if series is None or series.empty:
-                  return {}
-              result = {}
-              for name, (min_v, max_v) in zones.items():
-                  result[name] = int(((series >= min_v) & (series <= max_v)).sum())
-              return result
-
+          # ZONAS DE JUAN
           ZONAS_FC = {
               'Z1_recuperacion': (106, 126),
               'Z2_aerobico': (127, 140),
@@ -84,224 +64,319 @@ jobs:
               'Z5_vo2max': (158, 999)
           }
 
-          # DESCARGAR ACTIVIDADES (igual que script original)
+          def calc_np(vals):
+              if not vals or len(vals) < 3:
+                  return None
+              s = pd.Series(vals).dropna()
+              if len(s) < 3:
+                  return round(s.mean(), 1)
+              window = max(2, min(6, len(s) // 10))
+              rolling = s.rolling(window=window, min_periods=1).mean()
+              return round((rolling ** 4).mean() ** 0.25, 1) if len(rolling) > 0 else round(s.mean(), 1)
+
+          def calc_zones(series, zones):
+              if series is None or series.empty:
+                  return {}
+              return {name: int(((series >= min_v) & (series <= max_v)).sum()) 
+                      for name, (min_v, max_v) in zones.items()}
+
+          # DESCARGAR ACTIVIDADES (mismo metodo que tu script original)
+          params = {"oldest": "2000-01-01", "newest": datetime.now().strftime("%Y-%m-%d")}
+          
           activities_urls = [
               f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities",
               f"https://intervals.icu/api/v1/athlete/0/activities"
           ]
           
-          activities = []
+          all_activities = []
           for url in activities_urls:
               try:
                   r = requests.get(url, auth=("API_KEY", api_key), params=params, timeout=30)
-                  print(f"URL: {url} -> Status: {r.status_code}")
                   if r.status_code == 200:
-                      activities = r.json()
-                      break
+                      data = r.json()
+                      if isinstance(data, list):
+                          all_activities = data
+                          break
               except Exception as e:
-                  print(f"Error en URL {url}: {e}")
                   continue
 
-          if not activities:
-              print("No se encontraron actividades")
-              exit(1)
+          print(f"\n=== ACTIVIDADES DESCARGADAS: {len(all_activities)} ===")
 
-          print(f"Total actividades: {len(activities)}")
+          # VER TODAS LAS FECHAS (debug)
+          print("\n--- Ultimas 10 actividades en el sistema ---")
+          for i, a in enumerate(all_activities[:10]):
+              if isinstance(a, dict):
+                  print(f"{i+1}. {a.get('type', 'N/A')} - {a.get('start_date', 'N/A')[:10]} - {a.get('name', 'N/A')[:30]}")
 
-          # Filtrar Run y Ride recientes
-          valid_activities = [
-              a for a in activities 
-              if isinstance(a, dict) and a.get("type") in ["Run", "Ride"] 
-              and a.get("id")
-          ]
+          # FILTRAR: Incluir variantes (VirtualRide, TrailRun, etc.)
+          VALID_TYPES = ["Run", "Ride", "VirtualRide", "TrailRun", "VirtualRun", "MountainBikeRide"]
           
-          print(f"Run/Ride a procesar: {len(valid_activities)}")
+          recent_activities = []
+          for a in all_activities:
+              if not isinstance(a, dict):
+                  continue
+              
+              act_type = a.get("type", "")
+              act_date_str = (a.get("start_date") or "")[:10]
+              
+              if not act_date_str:
+                  continue
+              
+              try:
+                  act_date = datetime.strptime(act_date_str, "%Y-%m-%d").date()
+              except:
+                  continue
+              
+              # Verificar si es del periodo solicitado
+              if act_date >= cutoff_date and act_type in VALID_TYPES:
+                  recent_activities.append(a)
 
+          print(f"\n=== ACTIVIDADES RECIENTES VALIDAS: {len(recent_activities)} ===")
+          for a in recent_activities:
+              print(f"  - {a.get('type')} | {a.get('start_date')[:10]} | {a.get('name', 'N/A')[:40]}")
+
+          if len(recent_activities) == 0:
+              print("\n⚠️  NO SE ENCONTRARON ACTIVIDADES EN EL PERIODO")
+              print("Guardando archivos vacios...")
+              empty = {"generated": datetime.now().isoformat(), "count": 0, "activities": [], "message": "No activities found"}
+              for fname in ["running_detailed.json", "cycling_detailed.json"]:
+                  with open(f"data/{fname}", "w") as f:
+                      json.dump(empty, f)
+              exit(0)
+
+          # PROCESAR ACTIVIDADES (limitado a max_acts para no saturar API)
           running_data = []
           cycling_data = []
 
-          for idx, activity in enumerate(valid_activities[:15], 1):  # Limitar a 15 para no saturar
+          print(f"\n=== PROCESANDO {min(len(recent_activities), max_acts)} ACTIVIDADES ===")
+
+          for idx, activity in enumerate(recent_activities[:max_acts], 1):
               act_id = activity.get("id")
               act_type = activity.get("type")
               act_date = activity.get("start_date", "")[:10]
+              act_name = activity.get("name", "Sin nombre")
               
-              print(f"\n[{idx}] {act_type} - {act_date} - ID:{act_id}")
-              time.sleep(0.5)  # Rate limiting
+              print(f"\n[{idx}] {act_type} - {act_date}")
+              print(f"    Nombre: {act_name[:50]}")
+              print(f"    ID: {act_id}")
+              
+              time.sleep(0.4)
               
               try:
-                  # DESCARGAR STREAMS (endpoint especifico)
+                  # Intentar obtener streams
                   streams_url = f"https://intervals.icu/api/v1/athlete/{athlete_id}/activities/{act_id}/streams"
-                  
                   r = requests.get(streams_url, auth=("API_KEY", api_key), timeout=60)
                   
+                  print(f"    Streams status: {r.status_code}")
+                  
                   if r.status_code == 404:
-                      print("  No hay streams disponibles")
-                      continue
-                  elif r.status_code == 403:
-                      print(f"  Acceso denegado (403)")
+                      print(f"    ⚠️ No hay datos de streams para esta actividad")
                       continue
                   elif r.status_code != 200:
-                      print(f"  Error HTTP {r.status_code}")
+                      print(f"    ❌ Error HTTP {r.status_code}")
                       continue
                   
                   streams = r.json()
                   
-                  if not streams or "time" not in streams:
-                      print("  Streams vacios")
+                  if not streams or not isinstance(streams, dict):
+                      print(f"    ⚠️ Streams vacios o invalidos")
                       continue
                   
-                  # PROCESAR DATAFRAME
-                  df = pd.DataFrame({"time": streams.get("time", [])})
+                  if "time" not in streams or not streams["time"]:
+                      print(f"    ⚠️ No hay datos de tiempo en streams")
+                      continue
                   
-                  if "heartrate" in streams:
-                      df["hr"] = streams["heartrate"]
-                  if "cadence" in streams:
-                      df["cadence"] = streams["cadence"]
-                  if "watts" in streams:
-                      df["power"] = streams["watts"]
-                  if "velocity_smooth" in streams:
-                      df["speed"] = streams["velocity_smooth"]
-                  if "altitude" in streams:
-                      df["altitude"] = streams["altitude"]
-                  if "grade_smooth" in streams:
-                      df["grade"] = streams["grade_smooth"]
-                  if "temp" in streams:
-                      df["temp"] = streams["temp"]
+                  # Crear DataFrame
+                  df = pd.DataFrame({"time": streams["time"]})
+                  record_count = len(df)
+                  duration_min = int(df["time"].max() // 60) + 1
                   
-                  # Running especifico
-                  if "ground_time" in streams:
-                      df["ground_time"] = streams["ground_time"]
-                  if "vertical_oscillation" in streams:
-                      df["vert_osc"] = streams["vertical_oscillation"]
-                  if "stride_length" in streams:
-                      df["stride_length"] = streams["stride_length"]
+                  print(f"    Records: {record_count} | Duracion: ~{duration_min} min")
                   
-                  df = df.replace({None: np.nan})
+                  # Mapear campos disponibles
+                  fields_found = []
+                  field_map = {
+                      "heartrate": "hr",
+                      "cadence": "cadence", 
+                      "watts": "power",
+                      "velocity_smooth": "speed",
+                      "altitude": "altitude",
+                      "grade_smooth": "grade",
+                      "temp": "temp",
+                      "ground_time": "ground_time",
+                      "vertical_oscillation": "vert_osc",
+                      "stride_length": "stride_length",
+                      "stance_time_balance": "stance_balance"
+                  }
+                  
+                  for api_field, df_field in field_map.items():
+                      if api_field in streams and streams[api_field] and len(streams[api_field]) > 0:
+                          df[df_field] = streams[api_field]
+                          fields_found.append(api_field)
+                  
+                  print(f"    Campos disponibles: {fields_found}")
                   
                   if len(df) == 0:
                       continue
                   
-                  # Crear minutos
+                  df = df.replace({None: np.nan})
                   df["minute"] = (df["time"] // 60).astype(int)
-                  total_mins = int(df["minute"].max()) + 1
                   
-                  # METRICAS GLOBALES
+                  # MÉTRICAS GLOBALES
                   analytics = {
-                      "duration_minutes": total_mins,
-                      "total_records": len(df),
-                      "hr_avg": round(df["hr"].mean(), 1) if "hr" in df else None,
-                      "hr_max": int(df["hr"].max()) if "hr" in df else None,
-                      "hr_min": int(df["hr"].min()) if "hr" in df else None,
-                      "hr_zones_seconds": calc_zones(df.get("hr"), ZONAS_FC) if "hr" in df else {},
-                      "cadence_avg": round(df["cadence"].mean(), 1) if "cadence" in df else None,
-                      "cadence_max": int(df["cadence"].max()) if "cadence" in df else None,
-                      "speed_avg_ms": round(df["speed"].mean(), 2) if "speed" in df else None,
-                      "speed_max_ms": round(df["speed"].max(), 2) if "speed" in df else None,
-                      "power_avg": round(df["power"].mean(), 1) if "power" in df else None,
-                      "power_max": int(df["power"].max()) if "power" in df else None,
-                      "power_np": calc_np(df["power"].tolist()) if "power" in df else None,
-                      "elevation_gain_m": round(df["altitude"].max() - df["altitude"].min(), 1) if "altitude" in df else None,
+                      "duration_minutes": duration_min,
+                      "total_records": record_count,
+                      "fields_available": fields_found
                   }
                   
-                  # Limpiar None
-                  analytics = {k: v for k, v in analytics.items() if v is not None}
+                  if "hr" in df and df["hr"].notna().sum() > 0:
+                      analytics["hr_avg"] = round(df["hr"].mean(), 1)
+                      analytics["hr_max"] = int(df["hr"].max())
+                      analytics["hr_min"] = int(df["hr"].min())
+                      hr_zones = calc_zones(df["hr"], ZONAS_FC)
+                      # Convertir segundos a minutos
+                      analytics["hr_zones_minutes"] = {k: round(v/60, 1) for k, v in hr_zones.items()}
+                      # Zona predominante
+                      if hr_zones:
+                          analytics["zone_predominant"] = max(hr_zones, key=hr_zones.get)
                   
-                  # METRICAS POR MINUTO
-                  minute_records = []
-                  for m in range(total_mins):
+                  if "cadence" in df and df["cadence"].notna().sum() > 0:
+                      analytics["cadence_avg"] = round(df["cadence"].mean(), 1)
+                      analytics["cadence_max"] = int(df["cadence"].max())
+                      # Variabilidad
+                      cad_cv = (df["cadence"].std() / df["cadence"].mean() * 100) if df["cadence"].mean() > 0 else 0
+                      analytics["cadence_stability_percent"] = round(100 - cad_cv, 1)
+                  
+                  if "speed" in df and df["speed"].notna().sum() > 0:
+                      analytics["speed_avg_ms"] = round(df["speed"].mean(), 2)
+                      analytics["speed_avg_kmh"] = round(df["speed"].mean() * 3.6, 1)
+                      analytics["pace_min_km"] = round(16.6667 / df["speed"].mean(), 2) if df["speed"].mean() > 0 else None
+                  
+                  if "power" in df and df["power"].notna().sum() > 0:
+                      analytics["power_avg"] = round(df["power"].mean(), 1)
+                      analytics["power_max"] = int(df["power"].max())
+                      analytics["power_np"] = calc_np(df["power"].tolist())
+                      analytics["power_if"] = round(analytics["power_np"] / 320, 2) if analytics["power_np"] else None  # Assuming FTP ~320
+                  
+                  if "altitude" in df and df["altitude"].notna().sum() > 0:
+                      analytics["elevation_gain_m"] = round(df["altitude"].max() - df["altitude"].min(), 1)
+                      analytics["altitude_avg_m"] = round(df["altitude"].mean(), 1)
+                  
+                  # Running específico
+                  if "ground_time" in df:
+                      analytics["ground_contact_ms"] = round(df["ground_time"].mean(), 1)
+                  if "vert_osc" in df:
+                      analytics["vertical_oscillation_cm"] = round(df["vert_osc"].mean(), 2)
+                  if "stride_length" in df:
+                      analytics["stride_length_m"] = round(df["stride_length"].mean(), 2)
+                  
+                  # DATOS POR MINUTO (compacto)
+                  minute_data = []
+                  for m in range(duration_min):
                       mdf = df[df["minute"] == m]
                       if len(mdf) == 0:
                           continue
                       
-                      rec = {"minute": m}
+                      rec = {"min": m}
                       
                       if "hr" in mdf:
-                          rec["hr_avg"] = round(mdf["hr"].mean(), 1)
-                          rec["hr_max"] = int(mdf["hr"].max())
+                          rec["hr"] = round(mdf["hr"].mean(), 1)
                       if "cadence" in mdf:
-                          rec["cadence_avg"] = round(mdf["cadence"].mean(), 1)
+                          rec["cad"] = round(mdf["cadence"].mean(), 1)
                       if "power" in mdf:
-                          rec["power_avg"] = round(mdf["power"].mean(), 1)
-                          rec["power_np"] = calc_np(mdf["power"].tolist())
+                          rec["pwr"] = round(mdf["power"].mean(), 1)
                       if "speed" in mdf:
-                          rec["speed_avg"] = round(mdf["speed"].mean(), 2)
-                          rec["pace_min_km"] = round(16.6667 / mdf["speed"].mean(), 2) if mdf["speed"].mean() > 0 else None
-                      if "altitude" in mdf:
-                          rec["altitude"] = round(mdf["altitude"].mean(), 1)
-                      if "grade" in mdf:
-                          rec["grade"] = round(mdf["grade"].mean(), 1)
+                          rec["spd"] = round(mdf["speed"].mean(), 2)
+                          if mdf["speed"].mean() > 0:
+                              rec["pace"] = round(16.6667 / mdf["speed"].mean(), 2)
                       
-                      # Running especifico por minuto
-                      if "ground_time" in mdf:
-                          rec["ground_time_ms"] = round(mdf["ground_time"].mean(), 1)
-                      if "vert_osc" in mdf:
-                          rec["vert_osc_cm"] = round(mdf["vert_osc"].mean(), 2)
-                      if "stride_length" in mdf:
-                          rec["stride_length_m"] = round(mdf["stride_length"].mean(), 2)
-                      
-                      rec["samples"] = len(mdf)
-                      minute_records.append(rec)
+                      minute_data.append(rec)
                   
-                  # Construir objeto final
+                  # Clasificar tipo general
+                  general_type = "Ride" if "Ride" in act_type or act_type == "VirtualRide" else "Run"
+                  
                   activity_obj = {
                       "id": act_id,
-                      "name": activity.get("name"),
-                      "type": act_type,
+                      "name": act_name,
+                      "type": act_type,  # Tipo específico (VirtualRide, etc.)
+                      "general_type": general_type,
                       "date": activity.get("start_date"),
                       "intervals_icu_url": f"https://intervals.icu/activities/{act_id}",
                       "summary": {
                           "distance_m": activity.get("distance"),
-                          "moving_time_s": activity.get("moving_time"),
+                          "distance_km": round(activity.get("distance", 0)/1000, 2) if activity.get("distance") else None,
+                          "moving_time_min": round(activity.get("moving_time", 0)/60, 1) if activity.get("moving_time") else None,
                           "tss": activity.get("tss"),
                           "if": activity.get("ifr"),
-                          "feel": activity.get("feel"),
-                          "rpe": activity.get("rpe")
+                          "feel": activity.get("feel")
                       },
                       "analytics": analytics,
-                      "minute_by_minute": minute_records
+                      "by_minute": minute_data
                   }
                   
-                  if act_type == "Run":
+                  if general_type == "Run":
                       running_data.append(activity_obj)
-                      print(f"  Running: {total_mins}min, {len(minute_records)} registros")
+                      print(f"    ✓ RUNNING guardado: {len(minute_data)} minutos de datos")
                   else:
                       cycling_data.append(activity_obj)
-                      print(f"  Cycling: {total_mins}min, {len(minute_records)} registros")
+                      print(f"    ✓ CYCLING guardado: {len(minute_data)} minutos de datos")
                       
               except Exception as e:
-                  print(f"  Error procesando: {e}")
+                  print(f"    ❌ ERROR: {str(e)[:100]}")
+                  import traceback
+                  traceback.print_exc()
+                  continue
 
-          # GUARDAR RESULTADOS
-          print(f"\nGuardando archivos...")
-          
-          output = {
-              "generated_at": datetime.now().isoformat(),
-              "athlete_id": athlete_id,
+          # GUARDAR
+          print(f"\n{'='*60}")
+          print(f"RESULTADO FINAL:")
+          print(f"  Running (incluye TrailRun/VirtualRun): {len(running_data)}")
+          print(f"  Cycling (incluye VirtualRide/MTB): {len(cycling_data)}")
+
+          timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+
+          # Running
+          running_output = {
+              "generated": datetime.now().isoformat(),
               "period_days": days_back,
-              "running_count": len(running_data),
-              "cycling_count": len(cycling_data),
-              "activities": running_data + cycling_data
+              "count": len(running_data),
+              "activities": running_data
           }
-          
-          with open("data/training_analytics.json", "w", encoding="utf-8") as f:
-              json.dump(output, f, indent=2, ensure_ascii=False)
-          
           with open("data/running_detailed.json", "w", encoding="utf-8") as f:
-              json.dump({"generated": datetime.now().isoformat(), "count": len(running_data), "activities": running_data}, f, indent=2)
-          
+              json.dump(running_output, f, indent=2, ensure_ascii=False)
+
+          # Cycling
+          cycling_output = {
+              "generated": datetime.now().isoformat(),
+              "period_days": days_back,
+              "count": len(cycling_data),
+              "activities": cycling_data
+          }
           with open("data/cycling_detailed.json", "w", encoding="utf-8") as f:
-              json.dump({"generated": datetime.now().isoformat(), "count": len(cycling_data), "activities": cycling_data}, f, indent=2)
-          
-          print(f"\nOK: {len(running_data)} running, {len(cycling_data)} cycling")
-          print("Archivos: training_analytics.json, running_detailed.json, cycling_detailed.json")
+              json.dump(cycling_output, f, indent=2, ensure_ascii=False)
+
+          # Combinado
+          combined = {
+              "generated": datetime.now().isoformat(),
+              "running": running_data,
+              "cycling": cycling_data
+          }
+          with open("data/all_detailed.json", "w", encoding="utf-8") as f:
+              json.dump(combined, f, indent=2, ensure_ascii=False)
+
+          print(f"\nArchivos guardados:")
+          print(f"  - data/running_detailed.json ({len(running_data)} acts)")
+          print(f"  - data/cycling_detailed.json ({len(cycling_data)} acts)")
+          print(f"  - data/all_detailed.json")
           EOF
         env:
-          DAYS_BACK: ${{ github.event.inputs.days_back || '7' }}
+          DAYS_BACK: ${{ github.event.inputs.days_back || '5' }}
+          MAX_ACTIVITIES: ${{ github.event.inputs.max_activities || '10' }}
 
-      - name: Push results to Repository
+      - name: Push results
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add -f data/training_analytics.json data/running_detailed.json data/cycling_detailed.json
-          git diff --cached --quiet || git commit -m "Update detailed streams [skip ci]" || echo "No changes"
+          git add -f data/*.json
+          git diff --cached --quiet || git commit -m "Update detailed streams [skip ci]"
           git push
