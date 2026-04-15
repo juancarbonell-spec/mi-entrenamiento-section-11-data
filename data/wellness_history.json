@@ -14,7 +14,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-15T03:58:20.201+00:00",
+    "updated": "2026-04-15T05:09:04.105+00:00",
     "weight": null,
     "restingHR": 42,
     "hrv": null,
@@ -22,9 +22,9 @@
     "menstrualPhase": null,
     "menstrualPhasePredicted": null,
     "kcalConsumed": null,
-    "sleepSecs": null,
-    "sleepScore": null,
-    "sleepQuality": null,
+    "sleepSecs": 30420,
+    "sleepScore": 85.0,
+    "sleepQuality": 2,
     "avgSleepingHR": null,
     "soreness": null,
     "fatigue": null,
@@ -46,14 +46,14 @@
     "vo2max": null,
     "comments": null,
     "steps": 36,
-    "respiration": 12.297143,
+    "respiration": 11.837143,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
     "locked": null,
     "tempWeight": false,
     "tempRestingHR": false,
-    "BodyBatteryMax": 97,
+    "BodyBatteryMax": 100,
     "BodyBatteryMin": 58
   },
   {
