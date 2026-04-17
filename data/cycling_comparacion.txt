@@ -1,11 +1,11 @@
 ==========================================================================================
 COMPARACION AVANZADA
 
-hr_media             |  114.884 ->  116.949 |    1.80% | vs_total: +1.377 | MEJORA
-velocidad_kmh        |   15.033 ->   16.036 |    6.67% | vs_total: +0.668 | MEJORA
-velocidad_160ppm_kmh |    7.693 ->    5.447 |  -29.20% | vs_total: -1.123 | EMPEORA
-metros_latido        |    2.408 ->    2.553 |    6.02% | vs_total: +0.097 | MEJORA
-eficiencia           |    0.040 ->    0.043 |    6.03% | vs_total: +0.002 | MEJORA
-vvo2max              |   40.795 ->   45.098 |   10.55% | vs_total: +2.869 | MEJORA
-desacople_%          |   83.675 ->   75.052 |  -10.30% | vs_total: -5.748 | MEJORA
+hr_media             |  113.727 ->  116.949 |    2.83% | vs_total: +1.611 | MEJORA
+velocidad_kmh        |   15.313 ->   16.036 |    4.72% | vs_total: +0.361 | MEJORA
+velocidad_160ppm_kmh |      nan ->    5.447 |     nan% | vs_total: +0.000 | 
+metros_latido        |    2.474 ->    2.553 |    3.18% | vs_total: +0.039 | MEJORA
+eficiencia           |    0.041 ->    0.043 |    3.16% | vs_total: +0.001 | MEJORA
+vvo2max              |   40.980 ->   45.098 |   10.05% | vs_total: +2.059 | MEJORA
+desacople_%          |   82.146 ->   75.052 |   -8.64% | vs_total: -3.547 | MEJORA
 ==========================================================================================
