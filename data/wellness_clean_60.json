@@ -1,29 +1,55 @@
 [
   {
-    "id": "2026-04-25",
-    "ctl": 43.901253,
-    "atl": 58.828182,
-    "rampRate": 3.7103157,
-    "ctlLoad": 142.0,
-    "atlLoad": 142.0,
+    "id": "2026-04-26",
+    "ctl": 43.316753,
+    "atl": 54.190514,
+    "rampRate": 2.6126862,
+    "ctlLoad": 63.0,
+    "atlLoad": 63.0,
     "sportInfo": [
       {
         "type": "Ride"
       }
     ],
-    "updated": "2026-04-25T07:28:03.920+00:00",
+    "updated": "2026-04-26T04:42:30.541+00:00",
+    "restingHR": 44,
+    "hrv": 38.0,
+    "sleepSecs": 27300,
+    "sleepScore": 86.0,
+    "sleepQuality": 2,
+    "spO2": 94.0,
+    "steps": 148,
+    "respiration": 13.237,
+    "tempWeight": false,
+    "tempRestingHR": false,
+    "BodyBatteryMax": 86,
+    "BodyBatteryMin": 48
+  },
+  {
+    "id": "2026-04-25",
+    "ctl": 42.84248,
+    "atl": 52.837685,
+    "rampRate": 2.6515427,
+    "ctlLoad": 97.0,
+    "atlLoad": 97.0,
+    "sportInfo": [
+      {
+        "type": "Ride"
+      }
+    ],
+    "updated": "2026-04-25T23:02:30.342+00:00",
     "restingHR": 42,
     "hrv": 50.0,
     "sleepSecs": 27960,
     "sleepScore": 79.0,
     "sleepQuality": 3,
     "spO2": 92.0,
-    "steps": 322,
-    "respiration": 8.4,
+    "steps": 4292,
+    "respiration": 12.006525,
     "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 100,
-    "BodyBatteryMin": 59
+    "BodyBatteryMin": 40
   },
   {
     "id": "2026-04-24",
@@ -1588,32 +1614,5 @@
     "tempRestingHR": false,
     "BodyBatteryMax": 100,
     "BodyBatteryMin": 47
-  },
-  {
-    "id": "2026-02-24",
-    "ctl": 45.12681,
-    "atl": 50.66797,
-    "rampRate": 1.0618248,
-    "ctlLoad": 68.0,
-    "atlLoad": 68.0,
-    "sportInfo": [
-      {
-        "type": "Ride"
-      }
-    ],
-    "updated": "2026-04-05T03:18:12.953+00:00",
-    "restingHR": 43,
-    "hrv": 40.0,
-    "sleepSecs": 32040,
-    "sleepScore": 80.0,
-    "sleepQuality": 2,
-    "spO2": 96.7,
-    "vo2max": 47.0,
-    "steps": 12203,
-    "respiration": 13.725511,
-    "tempWeight": true,
-    "tempRestingHR": false,
-    "BodyBatteryMax": 96,
-    "BodyBatteryMin": 45
   }
 ]
