@@ -2,10 +2,10 @@
   {
     "id": "2026-04-27",
     "ctl": 43.0098,
-    "atl": 50.553978,
+    "atl": 51.086468,
     "rampRate": 3.2634315,
     "ctlLoad": 0.0,
-    "atlLoad": 0.0,
+    "atlLoad": 4.0,
     "sportInfo": [
       {
         "type": "Ride",
@@ -14,7 +14,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-27T05:56:37.320+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": null,
     "restingHR": 41,
     "hrv": 42.0,
@@ -45,13 +45,13 @@
     "abdomen": null,
     "vo2max": null,
     "comments": null,
-    "steps": 169,
-    "respiration": 10.388333,
+    "steps": 291,
+    "respiration": 9.319509,
     "carbohydrates": null,
     "protein": null,
     "fatTotal": null,
     "locked": null,
-    "tempWeight": false,
+    "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 96,
     "BodyBatteryMin": 53
@@ -330625,7 +330625,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 85.8,
     "restingHR": null,
     "hrv": null,
@@ -330680,7 +330680,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 86.0,
     "restingHR": null,
     "hrv": null,
@@ -330735,7 +330735,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 85.3,
     "restingHR": null,
     "hrv": null,
@@ -330790,7 +330790,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 85.5,
     "restingHR": null,
     "hrv": null,
@@ -330845,7 +330845,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 86.0,
     "restingHR": null,
     "hrv": null,
@@ -330900,7 +330900,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 86.1,
     "restingHR": null,
     "hrv": null,
@@ -330955,7 +330955,7 @@
         "pMax": null
       }
     ],
-    "updated": "2026-04-20T12:12:47.127+00:00",
+    "updated": "2026-04-27T08:05:17.882+00:00",
     "weight": 86.0,
     "restingHR": null,
     "hrv": null,
