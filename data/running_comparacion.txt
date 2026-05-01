@@ -1,11 +1,11 @@
 ==========================================================================================
 COMPARACION AVANZADA
 
-hr_media             |  138.046 ->  135.386 |   -1.93% | vs_total: -1.451 | EMPEORA
-ritmo_medio          |    6.080 ->    6.325 |    4.03% | vs_total: +0.134 | EMPEORA
-ritmo_160ppm         |    4.840 ->    4.872 |    0.67% | vs_total: +0.018 | EMPEORA
-metros_latido        |    1.195 ->    1.170 |   -2.05% | vs_total: -0.013 | EMPEORA
-eficiencia           |    0.020 ->    0.020 |   -2.06% | vs_total: -0.000 | EMPEORA
-vvo2max              |   14.127 ->   14.247 |    0.85% | vs_total: +0.066 | MEJORA
-desacople_%          |  -10.213 ->  -14.133 |   38.39% | vs_total: -2.138 | EMPEORA
+hr_media             |  138.463 ->  135.386 |   -2.22% | vs_total: -1.539 | EMPEORA
+ritmo_medio          |    6.056 ->    6.325 |    4.43% | vs_total: +0.134 | EMPEORA
+ritmo_160ppm         |    4.831 ->    4.872 |    0.85% | vs_total: +0.020 | EMPEORA
+metros_latido        |    1.196 ->    1.170 |   -2.11% | vs_total: -0.013 | EMPEORA
+eficiencia           |    0.020 ->    0.020 |   -2.12% | vs_total: -0.000 | EMPEORA
+vvo2max              |   14.178 ->   14.247 |    0.49% | vs_total: +0.035 | MEJORA
+desacople_%          |   -9.601 ->  -14.133 |   47.21% | vs_total: -2.266 | EMPEORA
 ==========================================================================================
