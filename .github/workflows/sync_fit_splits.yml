@@ -299,6 +299,10 @@ jobs:
 
       - name: Migrate existing garmin-splits.json
         run: |
+          if [ -f .nothing_to_do ]; then
+            echo "Sin FIT nuevos — saltando migración."
+            exit 0
+          fi
           python3 << 'MIGRATE'
           import json, os
 
