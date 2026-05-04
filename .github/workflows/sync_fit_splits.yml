@@ -113,6 +113,43 @@ jobs:
                           if field.value is not None:
                               session.setdefault(field.name, field.value)
 
+              # Mapear campos propietarios Garmin conocidos antes de filtrar
+              # Fuente: comunidad intervals.icu + FitFileViewer (campos confirmados empiricamente)
+              GARMIN_KNOWN = {
+                  # Sesion / actividad
+                  "unknown_110": "activity_name",           # Nombre libre dado a la actividad
+                  "unknown_81":  "local_timestamp",         # Timestamp local (offset UTC)
+                  "unknown_38":  "end_position_lat",        # Latitud final (semicircles)
+                  "unknown_39":  "end_position_long",       # Longitud final (semicircles)
+                  # Carga y rendimiento
+                  "unknown_168": "training_load_peak",      # Carga de entrenamiento Garmin (EPOC)
+                  "unknown_169": "total_grit",              # Grit (ciclismo de montana)
+                  "unknown_170": "avg_flow",                # Flow (ciclismo de montana)
+                  "unknown_150": "performance_condition",   # Condicion de rendimiento final
+                  "unknown_185": "training_stress_score",   # TSS (normalizado Garmin)
+                  "unknown_188": "primary_benefit",         # Beneficio principal (1=Recovery..5=VO2max)
+                  "unknown_196": "aerobic_training_effect_message", # Descripcion efecto aerobico
+                  "unknown_199": "anaerobic_training_effect_message",
+                  # Metricas avanzadas
+                  "unknown_106": "total_fractional_ascent", # Ascenso fraccionario
+                  "unknown_151": "avg_left_power_phase_peak",
+                  "unknown_152": "avg_right_power_phase_peak",
+                  "unknown_178": "avg_left_pedal_smoothness",
+                  "unknown_180": "avg_right_pedal_smoothness",
+                  "unknown_184": "avg_combined_pedal_smoothness",
+                  "unknown_200": "num_valid_gears",
+                  "unknown_205": "avg_left_torque_effectiveness",
+                  "unknown_206": "avg_right_torque_effectiveness",
+                  "unknown_207": "training_readiness_score",
+                  "unknown_211": "step_length_avg",         # Longitud de zancada media (mm)
+                  "unknown_212": "training_effect_label",   # Etiqueta efecto entrenamiento
+                  "unknown_215": "aerobic_training_effect", # Efecto aerobico (x10, ej 39=3.9)
+                  "unknown_216": "anaerobic_training_effect",
+              }
+              for src, dst in GARMIN_KNOWN.items():
+                  if src in session and session[src] is not None:
+                      session[dst] = session[src]
+
               sport      = session.get("sport", "unknown")
               sub_sport  = session.get("sub_sport", "")
               start_time = session.get("start_time")
@@ -174,7 +211,7 @@ jobs:
                       k: (ts(v) if isinstance(v, datetime) else
                           round(v, 3) if isinstance(v, float) else v)
                       for k, v in session.items()
-                      if v is not None and k not in ("unknown_fields",)
+                      if v is not None
                   },
                   "laps": laps,
               }
