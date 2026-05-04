@@ -146,7 +146,7 @@ jobs:
 
                       lap_data[name] = value
 
-                  laps.append(lap_data)
+                  laps.append({k: v for k, v in lap_data.items() if v is not None})
 
               if not laps:
                   print(f"  Sin laps en {os.path.basename(filepath)}")
@@ -170,7 +170,7 @@ jobs:
                       k: (ts(v) if isinstance(v, datetime) else
                           round(v, 3) if isinstance(v, float) else v)
                       for k, v in session.items()
-                      if k not in ("unknown_fields",)
+                      if v is not None and k not in ("unknown_fields",)
                   },
                   "laps": laps,
               }
@@ -222,6 +222,9 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add -f data/garmin-splits.json
-          git commit -m "Update garmin-splits [skip ci]" || echo "No changes to commit"
-          git push
+          if [ -f data/garmin-splits.json ]; then
+            git add -f data/garmin-splits.json
+            git diff --cached --quiet && echo "No changes to commit" || (git commit -m "Update garmin-splits [skip ci]" && git push)
+          else
+            echo "garmin-splits.json no generado (sin actividades nuevas o error en proceso)"
+          fi
