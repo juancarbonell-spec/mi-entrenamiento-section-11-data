@@ -115,40 +115,75 @@ jobs:
 
               # Mapear campos propietarios Garmin conocidos antes de filtrar
               # Fuente: comunidad intervals.icu + FitFileViewer (campos confirmados empiricamente)
+              # Mapeo de campos propietarios Garmin: (nombre_legible, tipo_esperado)
+              # Fuente: FitFileViewer Google Sheet (Harry Oosterveen) + comunidad GoldenCheetah/Intervals.icu
+              # tipo_esperado sirve para detectar si Garmin cambia el significado del campo
+              # Si el tipo no coincide, se conserva como unknown_XXX con sufijo _type_mismatch
               GARMIN_KNOWN = {
-                  # Sesion / actividad
-                  "unknown_110": "activity_name",           # Nombre libre dado a la actividad
-                  "unknown_81":  "local_timestamp",         # Timestamp local (offset UTC)
-                  "unknown_38":  "end_position_lat",        # Latitud final (semicircles)
-                  "unknown_39":  "end_position_long",       # Longitud final (semicircles)
-                  # Carga y rendimiento
-                  "unknown_168": "training_load_peak",      # Carga de entrenamiento Garmin (EPOC)
-                  "unknown_169": "total_grit",              # Grit (ciclismo de montana)
-                  "unknown_170": "avg_flow",                # Flow (ciclismo de montana)
-                  "unknown_150": "performance_condition",   # Condicion de rendimiento final
-                  "unknown_185": "training_stress_score",   # TSS (normalizado Garmin)
-                  "unknown_188": "primary_benefit",         # Beneficio principal (1=Recovery..5=VO2max)
-                  "unknown_196": "aerobic_training_effect_message", # Descripcion efecto aerobico
-                  "unknown_199": "anaerobic_training_effect_message",
-                  # Metricas avanzadas
-                  "unknown_106": "total_fractional_ascent", # Ascenso fraccionario
-                  "unknown_151": "avg_left_power_phase_peak",
-                  "unknown_152": "avg_right_power_phase_peak",
-                  "unknown_178": "avg_left_pedal_smoothness",
-                  "unknown_180": "avg_right_pedal_smoothness",
-                  "unknown_184": "avg_combined_pedal_smoothness",
-                  "unknown_200": "num_valid_gears",
-                  "unknown_205": "avg_left_torque_effectiveness",
-                  "unknown_206": "avg_right_torque_effectiveness",
-                  "unknown_207": "training_readiness_score",
-                  "unknown_211": "step_length_avg",         # Longitud de zancada media (mm)
-                  "unknown_212": "training_effect_label",   # Etiqueta efecto entrenamiento
-                  "unknown_215": "aerobic_training_effect", # Efecto aerobico (x10, ej 39=3.9)
-                  "unknown_216": "anaerobic_training_effect",
+                  # ── Sesion: identificacion y posicion ────────────────────────────
+                  "unknown_110": ("activity_name",               str),          # Nombre libre de la actividad
+                  "unknown_81":  ("local_timestamp",             int),          # Timestamp en hora local
+                  "unknown_38":  ("end_position_lat",            int),          # Latitud final (semicircles)
+                  "unknown_39":  ("end_position_long",           int),          # Longitud final (semicircles)
+                  # ── Efectos del entrenamiento (Training Effect) ───────────────
+                  "unknown_215": ("aerobic_training_effect",     (int, float)), # Efecto aerobico x10 (ej 39=3.9)
+                  "unknown_216": ("anaerobic_training_effect",   (int, float)), # Efecto anaerobico x10
+                  "unknown_188": ("primary_benefit",             int),          # 0=no,1=recovery,2=base,3=tempo,4=threshold,5=vo2max,6=anaerobic,7=sprint
+                  "unknown_212": ("training_effect_label",       int),          # Etiqueta numerica del efecto
+                  "unknown_196": ("aerobic_te_message",          (int, float)), # Codigo mensaje efecto aerobico
+                  "unknown_199": ("anaerobic_te_message",        (int, float)), # Codigo mensaje efecto anaerobico
+                  # ── Carga y rendimiento ──────────────────────────────────────
+                  "unknown_168": ("training_load_peak",          (int, float)), # Carga de entrenamiento EPOC
+                  "unknown_150": ("performance_condition",       (int, float)), # Condicion de rendimiento final
+                  "unknown_185": ("training_stress_score",       (int, float)), # TSS Garmin normalizado
+                  "unknown_207": ("training_readiness_score",    (int, float)), # Puntuacion de preparacion
+                  # ── MTB / ciclismo de montana ────────────────────────────────
+                  "unknown_169": ("total_grit",                  (int, float)), # Grit total (MTB)
+                  "unknown_170": ("avg_flow",                    (int, float)), # Flow medio (MTB)
+                  # ── Metricas de carrera (running dynamics) ───────────────────
+                  "unknown_106": ("total_fractional_ascent",     (int, float)), # Ascenso fraccionario
+                  "unknown_211": ("avg_step_length",             (int, float)), # Longitud media de zancada (mm)
+                  # ── Potencia / pedaleo ───────────────────────────────────────
+                  "unknown_151": ("avg_left_power_phase_peak",   (int, float)),
+                  "unknown_152": ("avg_right_power_phase_peak",  (int, float)),
+                  "unknown_178": ("avg_left_pedal_smoothness",   (int, float)),
+                  "unknown_180": ("avg_right_pedal_smoothness",  (int, float)),
+                  "unknown_184": ("avg_combined_pedal_smoothness",(int, float)),
+                  "unknown_200": ("num_valid_gears",             int),
+                  "unknown_205": ("avg_left_torque_effectiveness",(int, float)),
+                  "unknown_206": ("avg_right_torque_effectiveness",(int, float)),
+                  # ── RPE y bienestar (entrada manual post-actividad) ──────────
+                  # Confirmado: GoldenCheetah issue #4124
+                  "unknown_192": ("feel",                        int),  # 0=sin dato,25=malo,50=normal,75=bueno,100=excelente
+                  "unknown_193": ("rpe_x10",                     int),  # RPE*10 (ej 65=RPE 6.5)
               }
-              for src, dst in GARMIN_KNOWN.items():
+              for src, (dst, expected_type) in GARMIN_KNOWN.items():
                   if src in session and session[src] is not None:
-                      session[dst] = session[src]
+                      val = session[src]
+                      if isinstance(val, expected_type):
+                          session[dst] = val   # tipo correcto -> nombre legible
+                      else:
+                          session[src + "_type_mismatch"] = f"expected {expected_type}, got {type(val).__name__}: {val}"
+                          print(f"  AVISO: {src} tipo inesperado ({type(val).__name__}={val}), esperado {expected_type}")
+
+              # Decodificar enums conocidos a strings legibles
+              # Fuente: FitFileViewer sheet - enum "benefit"
+              BENEFIT_LABELS = {
+                  0: "no_benefit", 1: "recovery", 2: "base", 3: "tempo",
+                  4: "threshold", 5: "vo2_max", 6: "anaerobic", 7: "sprint",
+              }
+              if "primary_benefit" in session and isinstance(session["primary_benefit"], int):
+                  session["primary_benefit_label"] = BENEFIT_LABELS.get(session["primary_benefit"], f"unknown_{session['primary_benefit']}")
+
+              # Decodificar "feel" a string
+              FEEL_LABELS = {0: "no_data", 25: "bad", 50: "normal", 75: "good", 100: "excellent"}
+              if "feel" in session and isinstance(session["feel"], int):
+                  session["feel_label"] = FEEL_LABELS.get(session["feel"], f"unknown_{session['feel']}")
+
+              # training_readiness_level (Fuente: FitFileViewer sheet)
+              READINESS_LABELS = {1: "poor", 2: "low", 3: "moderate", 4: "high", 5: "prime"}
+              if "training_readiness_score" in session and isinstance(session["training_readiness_score"], int):
+                  session["training_readiness_level"] = READINESS_LABELS.get(session["training_readiness_score"], None)
 
               sport      = session.get("sport", "unknown")
               sub_sport  = session.get("sub_sport", "")
