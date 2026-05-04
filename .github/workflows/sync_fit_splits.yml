@@ -1,0 +1,227 @@
+name: Sync FIT Splits from Garmin
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_activities:
+        description: 'Cuantas actividades procesar como maximo (ej: 30)'
+        default: '30'
+        type: string
+
+jobs:
+  sync-fit-splits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install fitparse
+
+      - name: Process FIT files into lap splits
+        run: |
+          python3 << 'PYSCRIPT'
+          import os
+          import json
+          import glob
+          from datetime import datetime, timezone
+          import fitparse
+
+          MAX_ACTIVITIES = int(os.environ.get("MAX_ACTIVITIES", "30"))
+          FIT_DIR = "fit"
+          OUTPUT_FILE = "data/garmin-splits.json"
+
+          os.makedirs("data", exist_ok=True)
+
+          # ── 1. CARGAR ACTIVIDADES YA PROCESADAS ─────────────────────────────────
+          already_processed = set()
+          existing_activities = []
+
+          if os.path.exists(OUTPUT_FILE):
+              try:
+                  with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+                      existing_data = json.load(f)
+                  existing_activities = existing_data.get("activities", [])
+                  already_processed = {a["fit_file"] for a in existing_activities if "fit_file" in a}
+                  print(f"Actividades ya procesadas en garmin-splits.json: {len(already_processed)}")
+              except Exception as e:
+                  print(f"No se pudo leer {OUTPUT_FILE} (empezando de cero): {e}")
+
+          # ── 2. DESCUBRIR ARCHIVOS FIT NUEVOS ────────────────────────────────────
+          all_fit_files = sorted(glob.glob(os.path.join(FIT_DIR, "*.fit")))
+          if not all_fit_files:
+              print(f"No hay archivos .fit en {FIT_DIR}/")
+              exit(0)
+
+          # Solo los que no están ya procesados
+          new_fit_files = [f for f in all_fit_files if os.path.basename(f) not in already_processed]
+          print(f"Archivos FIT totales: {len(all_fit_files)}  |  Nuevos a procesar: {len(new_fit_files)}")
+
+          if not new_fit_files:
+              print("Nada nuevo que procesar.")
+              exit(0)
+
+          # ── 3. HELPERS ───────────────────────────────────────────────────────────
+          def semicircles_to_deg(val):
+              if val is None:
+                  return None
+              return round(val * (180 / 2**31), 6)
+
+          def safe(val, decimals=2):
+              """Redondea floats, deja el resto intacto, convierte None → None."""
+              if val is None:
+                  return None
+              if isinstance(val, float):
+                  return round(val, decimals)
+              return val
+
+          def parse_fit(filepath):
+              """
+              Devuelve un dict con metadatos de la actividad y la lista de laps.
+              Incluye TODOS los campos que el FIT trae en cada mensaje lap/session.
+              """
+              try:
+                  fit = fitparse.FitFile(filepath)
+              except Exception as e:
+                  print(f"  Error leyendo {filepath}: {e}")
+                  return None
+
+              # ── session (resumen global) ─────────────────────────────────────────
+              session = {}
+              for msg in fit.get_messages("session"):
+                  for field in msg:
+                      if field.value is not None:
+                          session[field.name] = field.value
+              if not session:
+                  # Algunos FIT no tienen mensaje session; intentamos con activity
+                  for msg in fit.get_messages("activity"):
+                      for field in msg:
+                          if field.value is not None:
+                              session.setdefault(field.name, field.value)
+
+              sport      = session.get("sport", "unknown")
+              sub_sport  = session.get("sub_sport", "")
+              start_time = session.get("start_time")
+
+              # Filtrar solo Run y Ride (cycling)
+              sport_str = str(sport).lower()
+              sub_str   = str(sub_sport).lower()
+              if "run" not in sport_str and "cycling" not in sport_str and "bike" not in sport_str:
+                  # También aceptar 'generic' con sub_sport útil
+                  if "run" not in sub_str and "cycling" not in sub_str and "bike" not in sub_str:
+                      print(f"  Ignorando deporte: {sport} / {sub_sport}")
+                      return None
+
+              activity_type = "Run" if "run" in sport_str or "run" in sub_str else "Ride"
+
+              # ── laps ────────────────────────────────────────────────────────────
+              laps = []
+              for lap_num, msg in enumerate(fit.get_messages("lap"), start=1):
+                  lap_data = {"lap": lap_num}
+                  for field in msg:
+                      if field.value is None:
+                          continue
+                      name  = field.name
+                      value = field.value
+
+                      # Coordenadas: convertir semicircles → grados
+                      if "position_lat" in name or "position_long" in name:
+                          value = semicircles_to_deg(value)
+                      # Timestamps: convertir a ISO string
+                      elif isinstance(value, datetime):
+                          value = value.isoformat()
+                      # Floats: redondear
+                      elif isinstance(value, float):
+                          value = safe(value, 3)
+
+                      lap_data[name] = value
+
+                  laps.append(lap_data)
+
+              if not laps:
+                  print(f"  Sin laps en {os.path.basename(filepath)}")
+                  return None
+
+              # ── metadatos de la actividad ────────────────────────────────────────
+              def ts(v):
+                  if isinstance(v, datetime):
+                      return v.isoformat()
+                  return str(v) if v else None
+
+              meta = {
+                  "fit_file":    os.path.basename(filepath),
+                  "type":        activity_type,
+                  "sport":       str(sport),
+                  "sub_sport":   str(sub_sport),
+                  "start_time":  ts(start_time),
+                  "total_laps":  len(laps),
+                  # Métricas globales del session (las que existan)
+                  "session_summary": {
+                      k: (ts(v) if isinstance(v, datetime) else
+                          round(v, 3) if isinstance(v, float) else v)
+                      for k, v in session.items()
+                      if k not in ("unknown_fields",)
+                  },
+                  "laps": laps,
+              }
+
+              return meta
+
+          # ── 4. PROCESAR NUEVOS ARCHIVOS ──────────────────────────────────────────
+          new_activities = []
+          for fpath in new_fit_files:
+              fname = os.path.basename(fpath)
+              print(f"\nProcesando: {fname}")
+              result = parse_fit(fpath)
+              if result:
+                  new_activities.append(result)
+                  print(f"  ✓ {result['type']}  {result['start_time']}  |  {result['total_laps']} laps")
+
+          print(f"\nNuevas actividades procesadas: {len(new_activities)}")
+
+          # ── 5. COMBINAR CON LAS YA EXISTENTES Y RECORTAR A MAX_ACTIVITIES ────────
+          # Ordenar todas por start_time desc para conservar las más recientes
+          all_activities = new_activities + existing_activities
+
+          def sort_key(a):
+              return a.get("start_time") or ""
+
+          all_activities.sort(key=sort_key, reverse=True)
+          all_activities = all_activities[:MAX_ACTIVITIES]
+
+          print(f"Total actividades en garmin-splits.json: {len(all_activities)}")
+
+          # ── 6. GUARDAR ───────────────────────────────────────────────────────────
+          output = {
+              "generated":        datetime.now(timezone.utc).isoformat(),
+              "max_activities":   MAX_ACTIVITIES,
+              "total_activities": len(all_activities),
+              "activities":       all_activities,
+          }
+
+          with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+              json.dump(output, f, indent=2, ensure_ascii=False)
+
+          size_kb = os.path.getsize(OUTPUT_FILE) / 1024
+          print(f"\n✅ Guardado {OUTPUT_FILE}  ({size_kb:.1f} KB)")
+          PYSCRIPT
+        env:
+          MAX_ACTIVITIES: ${{ github.event.inputs.max_activities }}
+
+      - name: Push garmin-splits.json
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -f data/garmin-splits.json
+          git commit -m "Update garmin-splits [skip ci]" || echo "No changes to commit"
+          git push
