@@ -7,7 +7,7 @@ on:
     inputs:
       max_activities:
         description: 'Cuantas actividades procesar como maximo (ej: 30)'
-        default: '10'
+        default: '30'
         type: string
 
 jobs:
@@ -75,7 +75,6 @@ jobs:
 
           if not new_fit_files:
               print("Nada nuevo que procesar.")
-              # Escribir flag para que el step de push sepa que no hay cambios
               with open(".nothing_to_do", "w") as f:
                   f.write("ok")
               exit(0)
@@ -87,7 +86,6 @@ jobs:
               return round(val * (180 / 2**31), 6)
 
           def safe(val, decimals=2):
-              """Redondea floats, deja el resto intacto, convierte None → None."""
               if val is None:
                   return None
               if isinstance(val, float):
@@ -95,10 +93,6 @@ jobs:
               return val
 
           def parse_fit(filepath):
-              """
-              Devuelve un dict con metadatos de la actividad y la lista de laps.
-              Incluye TODOS los campos que el FIT trae en cada mensaje lap/session.
-              """
               try:
                   fit = fitparse.FitFile(filepath)
               except Exception as e:
@@ -112,67 +106,53 @@ jobs:
                       if field.value is not None:
                           session[field.name] = field.value
               if not session:
-                  # Algunos FIT no tienen mensaje session; intentamos con activity
                   for msg in fit.get_messages("activity"):
                       for field in msg:
                           if field.value is not None:
                               session.setdefault(field.name, field.value)
 
-              # Mapear campos propietarios Garmin conocidos antes de filtrar
-              # Fuente: comunidad intervals.icu + FitFileViewer (campos confirmados empiricamente)
-              # Mapeo de campos propietarios Garmin: (nombre_legible, tipo_esperado)
-              # Fuente: FitFileViewer Google Sheet (Harry Oosterveen) + comunidad GoldenCheetah/Intervals.icu
-              # tipo_esperado sirve para detectar si Garmin cambia el significado del campo
-              # Si el tipo no coincide, se conserva como unknown_XXX con sufijo _type_mismatch
-              GARMIN_KNOWN = {
-                  # ── Sesion: identificacion y posicion ────────────────────────────
-                  "unknown_110": ("activity_name",               str),          # Nombre libre de la actividad
-                  "unknown_81":  ("local_timestamp",             int),          # Timestamp en hora local
-                  "unknown_38":  ("end_position_lat",            int),          # Latitud final (semicircles)
-                  "unknown_39":  ("end_position_long",           int),          # Longitud final (semicircles)
-                  # ── Efectos del entrenamiento (Training Effect) ───────────────
-                  "unknown_215": ("aerobic_training_effect",     (int, float)), # Efecto aerobico x10 (ej 39=3.9)
-                  "unknown_216": ("anaerobic_training_effect",   (int, float)), # Efecto anaerobico x10
-                  "unknown_188": ("primary_benefit",             int),          # 0=no,1=recovery,2=base,3=tempo,4=threshold,5=vo2max,6=anaerobic,7=sprint
-                  "unknown_212": ("training_effect_label",       int),          # Etiqueta numerica del efecto
-                  "unknown_196": ("aerobic_te_message",          (int, float)), # Codigo mensaje efecto aerobico
-                  "unknown_199": ("anaerobic_te_message",        (int, float)), # Codigo mensaje efecto anaerobico
-                  # ── Carga y rendimiento ──────────────────────────────────────
-                  "unknown_168": ("training_load_peak",          (int, float)), # Carga de entrenamiento EPOC
-                  "unknown_150": ("performance_condition",       (int, float)), # Condicion de rendimiento final
-                  "unknown_185": ("training_stress_score",       (int, float)), # TSS Garmin normalizado
-                  "unknown_207": ("training_readiness_score",    (int, float)), # Puntuacion de preparacion
-                  # ── MTB / ciclismo de montana ────────────────────────────────
-                  "unknown_169": ("total_grit",                  (int, float)), # Grit total (MTB)
-                  "unknown_170": ("avg_flow",                    (int, float)), # Flow medio (MTB)
-                  # ── Metricas de carrera (running dynamics) ───────────────────
-                  "unknown_106": ("total_fractional_ascent",     (int, float)), # Ascenso fraccionario
-                  "unknown_211": ("avg_step_length",             (int, float)), # Longitud media de zancada (mm)
-                  # ── Potencia / pedaleo ───────────────────────────────────────
-                  "unknown_151": ("avg_left_power_phase_peak",   (int, float)),
-                  "unknown_152": ("avg_right_power_phase_peak",  (int, float)),
-                  "unknown_178": ("avg_left_pedal_smoothness",   (int, float)),
-                  "unknown_180": ("avg_right_pedal_smoothness",  (int, float)),
+              # ── Mapeo campos propietarios Garmin: SESSION ────────────────────────
+              # Fuente: FitFileViewer (Harry Oosterveen) + comunidad GoldenCheetah/Intervals.icu
+              SESSION_GARMIN_KNOWN = {
+                  "unknown_110": ("activity_name",                str),
+                  "unknown_81":  ("local_timestamp",              int),
+                  "unknown_38":  ("end_position_lat",             int),
+                  "unknown_39":  ("end_position_long",            int),
+                  "unknown_215": ("aerobic_training_effect",      (int, float)),
+                  "unknown_216": ("anaerobic_training_effect",    (int, float)),
+                  "unknown_188": ("primary_benefit",              int),
+                  "unknown_212": ("training_effect_label",        int),
+                  "unknown_196": ("aerobic_te_message",           (int, float)),
+                  "unknown_199": ("anaerobic_te_message",         (int, float)),
+                  "unknown_168": ("training_load_peak",           (int, float)),
+                  "unknown_150": ("performance_condition",        (int, float)),
+                  "unknown_185": ("training_stress_score",        (int, float)),
+                  "unknown_207": ("training_readiness_score",     (int, float)),
+                  "unknown_169": ("total_grit",                   (int, float)),
+                  "unknown_170": ("avg_flow",                     (int, float)),
+                  "unknown_106": ("total_fractional_ascent",      (int, float)),
+                  "unknown_211": ("avg_step_length",              (int, float)),
+                  "unknown_151": ("avg_left_power_phase_peak",    (int, float)),
+                  "unknown_152": ("avg_right_power_phase_peak",   (int, float)),
+                  "unknown_178": ("avg_left_pedal_smoothness",    (int, float)),
+                  "unknown_180": ("avg_right_pedal_smoothness",   (int, float)),
                   "unknown_184": ("avg_combined_pedal_smoothness",(int, float)),
-                  "unknown_200": ("num_valid_gears",             int),
+                  "unknown_200": ("num_valid_gears",              int),
                   "unknown_205": ("avg_left_torque_effectiveness",(int, float)),
                   "unknown_206": ("avg_right_torque_effectiveness",(int, float)),
-                  # ── RPE y bienestar (entrada manual post-actividad) ──────────
-                  # Confirmado: GoldenCheetah issue #4124
-                  "unknown_192": ("feel",                        int),  # 0=sin dato,25=malo,50=normal,75=bueno,100=excelente
-                  "unknown_193": ("rpe_x10",                     int),  # RPE*10 (ej 65=RPE 6.5)
+                  "unknown_192": ("feel",                         int),
+                  "unknown_193": ("rpe_x10",                      int),
               }
-              for src, (dst, expected_type) in GARMIN_KNOWN.items():
+              for src, (dst, expected_type) in SESSION_GARMIN_KNOWN.items():
                   if src in session and session[src] is not None:
                       val = session[src]
                       if isinstance(val, expected_type):
-                          session[dst] = val   # tipo correcto -> nombre legible
+                          session[dst] = val
                       else:
                           session[src + "_type_mismatch"] = f"expected {expected_type}, got {type(val).__name__}: {val}"
                           print(f"  AVISO: {src} tipo inesperado ({type(val).__name__}={val}), esperado {expected_type}")
 
-              # Decodificar enums conocidos a strings legibles
-              # Fuente: FitFileViewer sheet - enum "benefit"
+              # Decodificar enums
               BENEFIT_LABELS = {
                   0: "no_benefit", 1: "recovery", 2: "base", 3: "tempo",
                   4: "threshold", 5: "vo2_max", 6: "anaerobic", 7: "sprint",
@@ -180,12 +160,10 @@ jobs:
               if "primary_benefit" in session and isinstance(session["primary_benefit"], int):
                   session["primary_benefit_label"] = BENEFIT_LABELS.get(session["primary_benefit"], f"unknown_{session['primary_benefit']}")
 
-              # Decodificar "feel" a string
               FEEL_LABELS = {0: "no_data", 25: "bad", 50: "normal", 75: "good", 100: "excellent"}
               if "feel" in session and isinstance(session["feel"], int):
                   session["feel_label"] = FEEL_LABELS.get(session["feel"], f"unknown_{session['feel']}")
 
-              # training_readiness_level (Fuente: FitFileViewer sheet)
               READINESS_LABELS = {1: "poor", 2: "low", 3: "moderate", 4: "high", 5: "prime"}
               if "training_readiness_score" in session and isinstance(session["training_readiness_score"], int):
                   session["training_readiness_level"] = READINESS_LABELS.get(session["training_readiness_score"], None)
@@ -194,18 +172,29 @@ jobs:
               sub_sport  = session.get("sub_sport", "")
               start_time = session.get("start_time")
 
-              # Filtrar solo Run y Ride (cycling)
               sport_str = str(sport).lower()
               sub_str   = str(sub_sport).lower()
               if "run" not in sport_str and "cycling" not in sport_str and "bike" not in sport_str:
-                  # También aceptar 'generic' con sub_sport útil
                   if "run" not in sub_str and "cycling" not in sub_str and "bike" not in sub_str:
                       print(f"  Ignorando deporte: {sport} / {sub_sport}")
                       return None
 
               activity_type = "Run" if "run" in sport_str or "run" in sub_str else "Ride"
 
-              # ── laps ────────────────────────────────────────────────────────────
+              # ── Mapeo campos propietarios Garmin: LAP ────────────────────────────
+              # Confirmados por comunidad Garmin FIT SDK forums (mayo 2026)
+              LAP_GARMIN_KNOWN = {
+                  "unknown_136": ("avg_respiration_rate", (int, float)),  # brpm × 100
+                  "unknown_137": ("max_respiration_rate", (int, float)),  # brpm × 100
+                  "unknown_145": ("est_sweat_loss",       (int, float)),
+                  "unknown_155": ("resting_calories",     (int, float)),
+                  "unknown_27":  ("lap_nec_lat",          int),           # bounding box NE (semicircles)
+                  "unknown_28":  ("lap_nec_long",         int),           # bounding box NE (semicircles)
+                  "unknown_29":  ("lap_swc_lat",          int),           # bounding box SW (semicircles)
+                  "unknown_30":  ("lap_swc_long",         int),           # bounding box SW (semicircles)
+              }
+
+              # ── laps ─────────────────────────────────────────────────────────────
               laps = []
               for lap_num, msg in enumerate(fit.get_messages("lap"), start=1):
                   lap_data = {"lap": lap_num}
@@ -215,17 +204,29 @@ jobs:
                       name  = field.name
                       value = field.value
 
-                      # Coordenadas: convertir semicircles → grados
                       if "position_lat" in name or "position_long" in name:
                           value = semicircles_to_deg(value)
-                      # Timestamps: convertir a ISO string
                       elif isinstance(value, datetime):
                           value = value.isoformat()
-                      # Floats: redondear
                       elif isinstance(value, float):
                           value = safe(value, 3)
 
                       lap_data[name] = value
+
+                  # Renombrar unknowns confirmados del lap
+                  for src, (dst, expected_type) in LAP_GARMIN_KNOWN.items():
+                      if src in lap_data and lap_data[src] is not None:
+                          val = lap_data[src]
+                          if isinstance(val, expected_type):
+                              lap_data[dst] = val
+                              del lap_data[src]
+                          else:
+                              print(f"  AVISO lap {lap_num}: {src} tipo inesperado ({type(val).__name__}={val})")
+
+                  # Convertir respiración de unidades raw a brpm reales
+                  for key in ("avg_respiration_rate", "max_respiration_rate"):
+                      if key in lap_data and isinstance(lap_data[key], (int, float)):
+                          lap_data[key] = round(lap_data[key] / 100, 1)
 
                   laps.append({k: v for k, v in lap_data.items() if v is not None})
 
@@ -233,7 +234,6 @@ jobs:
                   print(f"  Sin laps en {os.path.basename(filepath)}")
                   return None
 
-              # ── metadatos de la actividad ────────────────────────────────────────
               def ts(v):
                   if isinstance(v, datetime):
                       return v.isoformat()
@@ -246,7 +246,6 @@ jobs:
                   "sub_sport":   str(sub_sport),
                   "start_time":  ts(start_time),
                   "total_laps":  len(laps),
-                  # Métricas globales del session (las que existan)
                   "session_summary": {
                       k: (ts(v) if isinstance(v, datetime) else
                           round(v, 3) if isinstance(v, float) else v)
@@ -270,8 +269,7 @@ jobs:
 
           print(f"\nNuevas actividades procesadas: {len(new_activities)}")
 
-          # ── 5. COMBINAR CON LAS YA EXISTENTES Y RECORTAR A MAX_ACTIVITIES ────────
-          # Ordenar todas por start_time desc para conservar las más recientes
+          # ── 5. COMBINAR CON LAS YA EXISTENTES ───────────────────────────────────
           all_activities = new_activities + existing_activities
 
           def sort_key(a):
@@ -299,7 +297,7 @@ jobs:
         env:
           MAX_ACTIVITIES: ${{ github.event.inputs.max_activities }}
 
-      - name: Migrate existing garmin-splits.json (renombrar unknown_* ya guardados)
+      - name: Migrate existing garmin-splits.json
         run: |
           python3 << 'MIGRATE'
           import json, os
@@ -312,7 +310,8 @@ jobs:
           with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
               data = json.load(f)
 
-          GARMIN_KNOWN = {
+          # ── Mapeo SESSION ────────────────────────────────────────────────────────
+          SESSION_KNOWN = {
               "unknown_110": "activity_name",
               "unknown_81":  "local_timestamp",
               "unknown_38":  "end_position_lat",
@@ -342,18 +341,29 @@ jobs:
               "unknown_192": "feel",
               "unknown_193": "rpe_x10",
           }
-          BENEFIT_LABELS = {0:"no_benefit",1:"recovery",2:"base",3:"tempo",4:"threshold",5:"vo2_max",6:"anaerobic",7:"sprint"}
-          FEEL_LABELS    = {0:"no_data",25:"bad",50:"normal",75:"good",100:"excellent"}
+
+          # ── Mapeo LAP (confirmados por comunidad Garmin FIT SDK forums) ──────────
+          LAP_KNOWN = {
+              "unknown_136": "avg_respiration_rate",  # brpm × 100 → se convierte abajo
+              "unknown_137": "max_respiration_rate",  # brpm × 100 → se convierte abajo
+              "unknown_145": "est_sweat_loss",
+              "unknown_155": "resting_calories",
+              "unknown_27":  "lap_nec_lat",
+              "unknown_28":  "lap_nec_long",
+              "unknown_29":  "lap_swc_lat",
+              "unknown_30":  "lap_swc_long",
+          }
+
+          BENEFIT_LABELS   = {0:"no_benefit",1:"recovery",2:"base",3:"tempo",4:"threshold",5:"vo2_max",6:"anaerobic",7:"sprint"}
+          FEEL_LABELS      = {0:"no_data",25:"bad",50:"normal",75:"good",100:"excellent"}
           READINESS_LABELS = {1:"poor",2:"low",3:"moderate",4:"high",5:"prime"}
 
-          def migrate_dict(d):
-              """Renombra unknown_* conocidos y elimina los ya renombrados."""
+          def migrate_session(d):
               out = {}
               for k, v in d.items():
-                  if k in GARMIN_KNOWN:
-                      new_key = GARMIN_KNOWN[k]
+                  if k in SESSION_KNOWN:
+                      new_key = SESSION_KNOWN[k]
                       out[new_key] = v
-                      # Decodificar enums
                       if new_key == "primary_benefit" and isinstance(v, int):
                           out["primary_benefit_label"] = BENEFIT_LABELS.get(v, f"unknown_{v}")
                       elif new_key == "feel" and isinstance(v, int):
@@ -364,14 +374,28 @@ jobs:
                       out[k] = v
               return out
 
+          def migrate_lap(d):
+              out = {}
+              for k, v in d.items():
+                  if k in LAP_KNOWN:
+                      new_key = LAP_KNOWN[k]
+                      # Convertir respiración de raw a brpm
+                      if new_key in ("avg_respiration_rate", "max_respiration_rate"):
+                          if isinstance(v, (int, float)):
+                              v = round(v / 100, 1)
+                      out[new_key] = v
+                  else:
+                      out[k] = v
+              return out
+
           migrated = 0
           for act in data.get("activities", []):
               if "session_summary" in act:
-                  act["session_summary"] = migrate_dict(act["session_summary"])
+                  act["session_summary"] = migrate_session(act["session_summary"])
+              new_laps = []
               for lap in act.get("laps", []):
-                  original = dict(lap)
-                  lap.clear()
-                  lap.update(migrate_dict(original))
+                  new_laps.append(migrate_lap(lap))
+              act["laps"] = new_laps
               migrated += 1
 
           with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
