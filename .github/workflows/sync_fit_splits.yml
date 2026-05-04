@@ -69,8 +69,27 @@ jobs:
               print(f"No hay archivos .fit en {FIT_DIR}/")
               exit(0)
 
-          # Solo los que no están ya procesados
-          new_fit_files = [f for f in all_fit_files if os.path.basename(f) not in already_processed]
+          # Obtener la fecha más reciente ya procesada (YYYY-MM-DD → YYYY.MM.DD para comparar con nombres FIT)
+          latest_date_prefix = None
+          if existing_activities:
+              latest_start = max(
+                  a["start_time"] for a in existing_activities if "start_time" in a
+              )
+              latest_date_prefix = latest_start[:10].replace("-", ".")
+              print(f"Última actividad procesada: {latest_start}  →  prefijo de fecha: {latest_date_prefix}")
+
+          def is_new(fpath):
+              fname = os.path.basename(fpath)
+              if fname in already_processed:
+                  return False
+              if latest_date_prefix is not None:
+                  # Comparación lexicográfica: YYYY.MM.DD es ordenable directamente
+                  file_date = fname[:10]
+                  if file_date < latest_date_prefix:
+                      return False
+              return True
+
+          new_fit_files = [f for f in all_fit_files if is_new(f)]
           print(f"Archivos FIT totales: {len(all_fit_files)}  |  Nuevos a procesar: {len(new_fit_files)}")
 
           if not new_fit_files:
@@ -299,10 +318,6 @@ jobs:
 
       - name: Migrate existing garmin-splits.json
         run: |
-          if [ -f .nothing_to_do ]; then
-            echo "Sin FIT nuevos — saltando migración."
-            exit 0
-          fi
           python3 << 'MIGRATE'
           import json, os
 
