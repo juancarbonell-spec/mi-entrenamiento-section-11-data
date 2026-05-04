@@ -1,11 +1,13 @@
 name: Sync FIT Splits from Garmin
 
 on:
+  schedule:
+    - cron: '0 */6 * * *'   # cada 6 horas
   workflow_dispatch:
     inputs:
       max_activities:
         description: 'Cuantas actividades procesar como maximo (ej: 30)'
-        default: '10'
+        default: '30'
         type: string
 
 jobs:
@@ -73,6 +75,9 @@ jobs:
 
           if not new_fit_files:
               print("Nada nuevo que procesar.")
+              # Escribir flag para que el step de push sepa que no hay cambios
+              with open(".nothing_to_do", "w") as f:
+                  f.write("ok")
               exit(0)
 
           # ── 3. HELPERS ───────────────────────────────────────────────────────────
@@ -294,13 +299,98 @@ jobs:
         env:
           MAX_ACTIVITIES: ${{ github.event.inputs.max_activities }}
 
+      - name: Migrate existing garmin-splits.json (renombrar unknown_* ya guardados)
+        run: |
+          python3 << 'MIGRATE'
+          import json, os
+
+          OUTPUT_FILE = "data/garmin-splits.json"
+          if not os.path.exists(OUTPUT_FILE):
+              print("No existe garmin-splits.json, nada que migrar.")
+              exit(0)
+
+          with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+              data = json.load(f)
+
+          GARMIN_KNOWN = {
+              "unknown_110": "activity_name",
+              "unknown_81":  "local_timestamp",
+              "unknown_38":  "end_position_lat",
+              "unknown_39":  "end_position_long",
+              "unknown_215": "aerobic_training_effect",
+              "unknown_216": "anaerobic_training_effect",
+              "unknown_188": "primary_benefit",
+              "unknown_212": "training_effect_label",
+              "unknown_196": "aerobic_te_message",
+              "unknown_199": "anaerobic_te_message",
+              "unknown_168": "training_load_peak",
+              "unknown_150": "performance_condition",
+              "unknown_185": "training_stress_score",
+              "unknown_207": "training_readiness_score",
+              "unknown_169": "total_grit",
+              "unknown_170": "avg_flow",
+              "unknown_106": "total_fractional_ascent",
+              "unknown_211": "avg_step_length",
+              "unknown_151": "avg_left_power_phase_peak",
+              "unknown_152": "avg_right_power_phase_peak",
+              "unknown_178": "avg_left_pedal_smoothness",
+              "unknown_180": "avg_right_pedal_smoothness",
+              "unknown_184": "avg_combined_pedal_smoothness",
+              "unknown_200": "num_valid_gears",
+              "unknown_205": "avg_left_torque_effectiveness",
+              "unknown_206": "avg_right_torque_effectiveness",
+              "unknown_192": "feel",
+              "unknown_193": "rpe_x10",
+          }
+          BENEFIT_LABELS = {0:"no_benefit",1:"recovery",2:"base",3:"tempo",4:"threshold",5:"vo2_max",6:"anaerobic",7:"sprint"}
+          FEEL_LABELS    = {0:"no_data",25:"bad",50:"normal",75:"good",100:"excellent"}
+          READINESS_LABELS = {1:"poor",2:"low",3:"moderate",4:"high",5:"prime"}
+
+          def migrate_dict(d):
+              """Renombra unknown_* conocidos y elimina los ya renombrados."""
+              out = {}
+              for k, v in d.items():
+                  if k in GARMIN_KNOWN:
+                      new_key = GARMIN_KNOWN[k]
+                      out[new_key] = v
+                      # Decodificar enums
+                      if new_key == "primary_benefit" and isinstance(v, int):
+                          out["primary_benefit_label"] = BENEFIT_LABELS.get(v, f"unknown_{v}")
+                      elif new_key == "feel" and isinstance(v, int):
+                          out["feel_label"] = FEEL_LABELS.get(v, f"unknown_{v}")
+                      elif new_key == "training_readiness_score" and isinstance(v, int):
+                          out["training_readiness_level"] = READINESS_LABELS.get(v)
+                  else:
+                      out[k] = v
+              return out
+
+          migrated = 0
+          for act in data.get("activities", []):
+              if "session_summary" in act:
+                  act["session_summary"] = migrate_dict(act["session_summary"])
+              for lap in act.get("laps", []):
+                  original = dict(lap)
+                  lap.clear()
+                  lap.update(migrate_dict(original))
+              migrated += 1
+
+          with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+              json.dump(data, f, indent=2, ensure_ascii=False)
+
+          print(f"Migradas {migrated} actividades.")
+          MIGRATE
+
       - name: Push garmin-splits.json
         run: |
+          if [ -f .nothing_to_do ]; then
+            echo "Sin FIT nuevos — nada que commitear."
+            exit 0
+          fi
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           if [ -f data/garmin-splits.json ]; then
             git add -f data/garmin-splits.json
             git diff --cached --quiet && echo "No changes to commit" || (git commit -m "Update garmin-splits [skip ci]" && git push)
           else
-            echo "garmin-splits.json no generado (sin actividades nuevas o error en proceso)"
+            echo "garmin-splits.json no generado (error en proceso)"
           fi
