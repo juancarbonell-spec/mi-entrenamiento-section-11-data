@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          lfs: true
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -38,7 +39,7 @@ jobs:
           import fitparse
 
           MAX_ACTIVITIES = int(os.environ.get("MAX_ACTIVITIES", "30"))
-          FIT_DIR = "fit"
+          FIT_DIR = "FIT"
           OUTPUT_FILE = "data/garmin-splits.json"
 
           os.makedirs("data", exist_ok=True)
@@ -58,7 +59,10 @@ jobs:
                   print(f"No se pudo leer {OUTPUT_FILE} (empezando de cero): {e}")
 
           # ── 2. DESCUBRIR ARCHIVOS FIT NUEVOS ────────────────────────────────────
-          all_fit_files = sorted(glob.glob(os.path.join(FIT_DIR, "*.fit")))
+          all_fit_files = sorted(
+              glob.glob(os.path.join(FIT_DIR, "*.fit")) +
+              glob.glob(os.path.join(FIT_DIR, "*.FIT"))
+          )
           if not all_fit_files:
               print(f"No hay archivos .fit en {FIT_DIR}/")
               exit(0)
