@@ -40,7 +40,7 @@ jobs:
           from datetime import datetime, timezone
           import fitparse
 
-          MAX_ACTIVITIES = int(os.environ.get("MAX_ACTIVITIES", "30"))
+          MAX_ACTIVITIES = int(os.environ.get("MAX_ACTIVITIES") or "30")
           FIT_DIR = "FIT"
           OUTPUT_FILE = "data/garmin-splits.json"
 
@@ -314,7 +314,7 @@ jobs:
           print(f"\n✅ Guardado {OUTPUT_FILE}  ({size_kb:.1f} KB)")
           PYSCRIPT
         env:
-          MAX_ACTIVITIES: ${{ github.event.inputs.max_activities }}
+          MAX_ACTIVITIES: ${{ github.event.inputs.max_activities || '30' }}
 
       - name: Migrate existing garmin-splits.json
         run: |
