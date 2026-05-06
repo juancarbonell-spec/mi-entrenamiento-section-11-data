@@ -9,6 +9,12 @@ on:
         description: 'Cuantas actividades procesar como maximo (ej: 30)'
         default: '30'
         type: string
+  workflow_call:
+    inputs:
+      max_activities:
+        description: 'Cuantas actividades procesar como maximo (ej: 30)'
+        default: '30'
+        type: string
 
 jobs:
   sync-fit-splits:
@@ -83,7 +89,6 @@ jobs:
               if fname in already_processed:
                   return False
               if latest_date_prefix is not None:
-                  # Comparación lexicográfica: YYYY.MM.DD es ordenable directamente
                   file_date = fname[:10]
                   if file_date < latest_date_prefix:
                       return False
@@ -131,7 +136,6 @@ jobs:
                               session.setdefault(field.name, field.value)
 
               # ── Mapeo campos propietarios Garmin: SESSION ────────────────────────
-              # Fuente: FitFileViewer (Harry Oosterveen) + comunidad GoldenCheetah/Intervals.icu
               SESSION_GARMIN_KNOWN = {
                   "unknown_110": ("activity_name",                str),
                   "unknown_81":  ("local_timestamp",              int),
@@ -201,16 +205,15 @@ jobs:
               activity_type = "Run" if "run" in sport_str or "run" in sub_str else "Ride"
 
               # ── Mapeo campos propietarios Garmin: LAP ────────────────────────────
-              # Confirmados por comunidad Garmin FIT SDK forums (mayo 2026)
               LAP_GARMIN_KNOWN = {
-                  "unknown_136": ("avg_respiration_rate", (int, float)),  # brpm × 100
-                  "unknown_137": ("max_respiration_rate", (int, float)),  # brpm × 100
+                  "unknown_136": ("avg_respiration_rate", (int, float)),
+                  "unknown_137": ("max_respiration_rate", (int, float)),
                   "unknown_145": ("est_sweat_loss",       (int, float)),
                   "unknown_155": ("resting_calories",     (int, float)),
-                  "unknown_27":  ("lap_nec_lat",          int),           # bounding box NE (semicircles)
-                  "unknown_28":  ("lap_nec_long",         int),           # bounding box NE (semicircles)
-                  "unknown_29":  ("lap_swc_lat",          int),           # bounding box SW (semicircles)
-                  "unknown_30":  ("lap_swc_long",         int),           # bounding box SW (semicircles)
+                  "unknown_27":  ("lap_nec_lat",          int),
+                  "unknown_28":  ("lap_nec_long",         int),
+                  "unknown_29":  ("lap_swc_lat",          int),
+                  "unknown_30":  ("lap_swc_long",         int),
               }
 
               # ── laps ─────────────────────────────────────────────────────────────
@@ -232,7 +235,6 @@ jobs:
 
                       lap_data[name] = value
 
-                  # Renombrar unknowns confirmados del lap
                   for src, (dst, expected_type) in LAP_GARMIN_KNOWN.items():
                       if src in lap_data and lap_data[src] is not None:
                           val = lap_data[src]
@@ -242,7 +244,6 @@ jobs:
                           else:
                               print(f"  AVISO lap {lap_num}: {src} tipo inesperado ({type(val).__name__}={val})")
 
-                  # Convertir respiración de unidades raw a brpm reales
                   for key in ("avg_respiration_rate", "max_respiration_rate"):
                       if key in lap_data and isinstance(lap_data[key], (int, float)):
                           lap_data[key] = round(lap_data[key] / 100, 1)
@@ -314,7 +315,7 @@ jobs:
           print(f"\n✅ Guardado {OUTPUT_FILE}  ({size_kb:.1f} KB)")
           PYSCRIPT
         env:
-          MAX_ACTIVITIES: ${{ github.event.inputs.max_activities || '30' }}
+          MAX_ACTIVITIES: ${{ inputs.max_activities || github.event.inputs.max_activities || '30' }}
 
       - name: Migrate existing garmin-splits.json
         run: |
@@ -329,7 +330,6 @@ jobs:
           with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
               data = json.load(f)
 
-          # ── Mapeo SESSION ────────────────────────────────────────────────────────
           SESSION_KNOWN = {
               "unknown_110": "activity_name",
               "unknown_81":  "local_timestamp",
@@ -361,10 +361,9 @@ jobs:
               "unknown_193": "rpe_x10",
           }
 
-          # ── Mapeo LAP (confirmados por comunidad Garmin FIT SDK forums) ──────────
           LAP_KNOWN = {
-              "unknown_136": "avg_respiration_rate",  # brpm × 100 → se convierte abajo
-              "unknown_137": "max_respiration_rate",  # brpm × 100 → se convierte abajo
+              "unknown_136": "avg_respiration_rate",
+              "unknown_137": "max_respiration_rate",
               "unknown_145": "est_sweat_loss",
               "unknown_155": "resting_calories",
               "unknown_27":  "lap_nec_lat",
@@ -398,7 +397,6 @@ jobs:
               for k, v in d.items():
                   if k in LAP_KNOWN:
                       new_key = LAP_KNOWN[k]
-                      # Convertir respiración de raw a brpm
                       if new_key in ("avg_respiration_rate", "max_respiration_rate"):
                           if isinstance(v, (int, float)):
                               v = round(v / 100, 1)
