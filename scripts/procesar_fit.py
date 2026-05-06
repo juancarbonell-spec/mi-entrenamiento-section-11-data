@@ -7,19 +7,7 @@ from fitdecode.reader import ErrorHandling
 import numpy as np
 
 # ---------- CONFIG ----------
-# En GitHub Actions el repo queda en el directorio de trabajo,
-# así que FIT/ y data/ son rutas relativas al raíz del repo.
-CARPETA_FIT = Path("FIT")
-DATA_DIR    = Path("data")
-
-CSV_FULL_RUN        = DATA_DIR / "running_30d_full.csv"
-CSV_SUMMARY_RUN     = DATA_DIR / "running_30d_summary.csv"
-TXT_COMPARACION_RUN = DATA_DIR / "running_comparacion.txt"
-
-CSV_FULL_CYC        = DATA_DIR / "cycling_30d_full.csv"
-CSV_SUMMARY_CYC     = DATA_DIR / "cycling_30d_summary.csv"
-TXT_COMPARACION_CYC = DATA_DIR / "cycling_comparacion.txt"
-
+CARPETA_FIT      = Path("FIT")
 VENTANA_DIAS     = 30
 DEPORTES_VALIDOS = {"running", "cycling"}
 
@@ -167,28 +155,23 @@ def comparar_avanzado(df_summary):
     lineas.append("=" * 90)
     return "\n".join(lineas)
 
-# ---------- GUARDAR DEPORTE ----------
-def guardar_deporte(all_rows, summary_rows, csv_full, csv_summary, txt_comp, etiqueta):
+# ---------- IMPRIMIR DEPORTE ----------
+def imprimir_deporte(all_rows, summary_rows, etiqueta):
     if not all_rows:
         print(f"\nNo hay datos de {etiqueta}.")
         return
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-    df_full = pd.DataFrame(all_rows)
-    df_full.to_csv(csv_full, index=False, encoding="utf-8-sig")
-    print(f"\n  {csv_full}  ({len(df_full)} registros)")
-
+    df_full    = pd.DataFrame(all_rows)
     df_summary = pd.DataFrame(summary_rows).sort_values("fecha", ascending=False)
-    df_summary.to_csv(csv_summary, index=False, encoding="utf-8-sig")
-    print(f"  {csv_summary}  ({len(df_summary)} actividades)")
 
-    texto = comparar_avanzado(df_summary)
-    print(f"\n{etiqueta.upper()} -- COMPARACION\n{texto}")
+    print(f"\n{'='*50}")
+    print(f"{etiqueta.upper()} — {len(df_summary)} actividades | {len(df_full)} registros")
+    print(f"{'='*50}")
+    print(df_summary.to_string(index=False))
 
-    with open(txt_comp, "w", encoding="utf-8") as f:
-        f.write(texto)
-    print(f"  {txt_comp}")
+    if len(df_summary) >= 2:
+        texto = comparar_avanzado(df_summary)
+        print(f"\n{etiqueta.upper()} -- COMPARACION\n{texto}")
 
 # ---------- MAIN ----------
 def main():
@@ -258,10 +241,8 @@ def main():
     print(f"Cycling : {cyc_count} actividades | {len(cyc_rows)} registros")
     print(f"{'='*50}")
 
-    guardar_deporte(run_rows, run_summary,
-                    CSV_FULL_RUN, CSV_SUMMARY_RUN, TXT_COMPARACION_RUN, "running")
-    guardar_deporte(cyc_rows, cyc_summary,
-                    CSV_FULL_CYC, CSV_SUMMARY_CYC, TXT_COMPARACION_CYC, "cycling")
+    imprimir_deporte(run_rows, run_summary, "running")
+    imprimir_deporte(cyc_rows, cyc_summary, "cycling")
 
 if __name__ == "__main__":
     main()
