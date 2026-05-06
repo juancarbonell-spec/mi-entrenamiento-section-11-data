@@ -2,9 +2,13 @@ name: Master Sync
 
 on:
   workflow_dispatch:
+    inputs:
+      max_activities:
+        description: 'Cuantas actividades procesar como maximo (ej: 30)'
+        default: '30'
+        type: string
 
 jobs:
-
   intervals:
     uses: ./.github/workflows/sync.yml
     secrets: inherit
@@ -17,4 +21,6 @@ jobs:
   splits-fit:
     needs: dropbox-fit
     uses: ./.github/workflows/sync_fit_splits.yml
+    with:
+      max_activities: ${{ inputs.max_activities || '30' }}
     secrets: inherit
