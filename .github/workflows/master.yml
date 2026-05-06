@@ -13,3 +13,8 @@ jobs:
     needs: intervals
     uses: ./.github/workflows/sync_and_process.yml
     secrets: inherit
+
+  splits-fit:
+    needs: dropbox-fit
+    uses: ./.github/workflows/sync_fit_splits.yml
+    secrets: inherit
