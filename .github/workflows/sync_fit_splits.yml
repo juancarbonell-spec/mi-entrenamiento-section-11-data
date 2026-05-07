@@ -75,7 +75,6 @@ jobs:
               print(f"No hay archivos .fit en {FIT_DIR}/")
               exit(0)
 
-          # Obtener la fecha más reciente ya procesada (YYYY-MM-DD → YYYY.MM.DD para comparar con nombres FIT)
           latest_date_prefix = None
           if existing_activities:
               latest_start = max(
@@ -123,7 +122,6 @@ jobs:
                   print(f"  Error leyendo {filepath}: {e}")
                   return None
 
-              # ── session (resumen global) ─────────────────────────────────────────
               session = {}
               for msg in fit.get_messages("session"):
                   for field in msg:
@@ -135,7 +133,6 @@ jobs:
                           if field.value is not None:
                               session.setdefault(field.name, field.value)
 
-              # ── Mapeo campos propietarios Garmin: SESSION ────────────────────────
               SESSION_GARMIN_KNOWN = {
                   "unknown_110": ("activity_name",                str),
                   "unknown_81":  ("local_timestamp",              int),
@@ -175,7 +172,6 @@ jobs:
                           session[src + "_type_mismatch"] = f"expected {expected_type}, got {type(val).__name__}: {val}"
                           print(f"  AVISO: {src} tipo inesperado ({type(val).__name__}={val}), esperado {expected_type}")
 
-              # Decodificar enums
               BENEFIT_LABELS = {
                   0: "no_benefit", 1: "recovery", 2: "base", 3: "tempo",
                   4: "threshold", 5: "vo2_max", 6: "anaerobic", 7: "sprint",
@@ -204,7 +200,6 @@ jobs:
 
               activity_type = "Run" if "run" in sport_str or "run" in sub_str else "Ride"
 
-              # ── Mapeo campos propietarios Garmin: LAP ────────────────────────────
               LAP_GARMIN_KNOWN = {
                   "unknown_136": ("avg_respiration_rate", (int, float)),
                   "unknown_137": ("max_respiration_rate", (int, float)),
@@ -216,7 +211,6 @@ jobs:
                   "unknown_30":  ("lap_swc_long",         int),
               }
 
-              # ── laps ─────────────────────────────────────────────────────────────
               laps = []
               for lap_num, msg in enumerate(fit.get_messages("lap"), start=1):
                   lap_data = {"lap": lap_num}
@@ -431,7 +425,11 @@ jobs:
           git config --local user.name "GitHub Action"
           if [ -f data/garmin-splits.json ]; then
             git add -f data/garmin-splits.json
-            git diff --cached --quiet && echo "No changes to commit" || (git commit -m "Update garmin-splits [skip ci]" && git push)
+            git diff --cached --quiet && echo "No changes to commit" || (
+              git commit -m "Update garmin-splits [skip ci]" &&
+              git pull --rebase origin main &&
+              git push
+            )
           else
             echo "garmin-splits.json no generado (error en proceso)"
           fi
