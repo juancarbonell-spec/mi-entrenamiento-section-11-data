@@ -1,4 +1,4 @@
-name: Full Training Engine V10 sync intervals.icu
+name: Full Training Engine V8 sync intervals.icu
 
 on:
   workflow_call:
@@ -95,113 +95,21 @@ jobs:
               if (w.get("id") or "")[:10] >= cutoff_60
           ])
 
-          # Save all activities too (needed for FIT step)
-          with open("data/activities_all.json", "w", encoding="utf-8") as f:
-              json.dump(remove_nulls(activities), f, indent=2, ensure_ascii=False)
-
           with open("data/activities_clean_60.json", "w", encoding="utf-8") as f:
               json.dump(activities_clean_60, f, indent=2, ensure_ascii=False)
 
           with open("data/wellness_clean_60.json", "w", encoding="utf-8") as f:
               json.dump(wellness_clean_60, f, indent=2, ensure_ascii=False)
 
-          print(f"✅ Total activities: {len(activities)}")
           print(f"✅ Clean 60d (desde {cutoff_60}): {len(activities_clean_60)} activities | {len(wellness_clean_60)} wellness")
           print("📁 Archivos generados:")
-          print("   data/activities_all.json")
           print("   data/activities_clean_60.json")
           print("   data/wellness_clean_60.json")
-          EOF
-
-      - name: Download FIT files from Intervals.icu
-        run: |
-          python << 'EOF'
-          import requests, os, json, glob
-
-          athlete_id = os.environ.get("INTERVALS_ATHLETE_ID", "").strip()
-          api_key    = os.environ.get("INTERVALS_API_KEY", "").strip()
-
-          os.makedirs("fit-intervals", exist_ok=True)
-
-          # Check how many FIT files already exist
-          existing_fits = set(os.path.basename(f) for f in glob.glob("fit-intervals/*.fit"))
-          is_first_run = len(existing_fits) == 0
-          print(f"📂 FIT files existentes en repo: {len(existing_fits)}")
-          print(f"🔍 Modo: {'INICIAL — últimas 500 actividades' if is_first_run else 'INCREMENTAL — solo nuevas'}")
-
-          # Load all activities
-          with open("data/activities_all.json", "r", encoding="utf-8") as f:
-              all_activities = json.load(f)
-
-          # Sort by date descending (newest first)
-          all_activities_sorted = sorted(
-              all_activities,
-              key=lambda a: a.get("start_date") or "",
-              reverse=True
-          )
-
-          if is_first_run:
-              # First run: take the latest 500
-              candidates = all_activities_sorted[:500]
-              print(f"📦 Actividades candidatas: {len(candidates)} (de {len(all_activities_sorted)} totales)")
-          else:
-              # Incremental: only activities whose FIT doesn't exist yet
-              candidates = [
-                  a for a in all_activities_sorted
-                  if f"{(a.get('start_date') or '')[:10]}_{a.get('id')}.fit" not in existing_fits
-              ]
-              print(f"📦 Actividades nuevas a descargar: {len(candidates)}")
-
-          downloaded = 0
-          skipped    = 0
-          failed     = 0
-
-          for activity in candidates:
-              activity_id = activity.get("id")
-              start_date  = (activity.get("start_date") or "")[:10]
-
-              if not activity_id:
-                  continue
-
-              filename     = f"fit-intervals/{start_date}_{activity_id}.fit"
-              filename_key = os.path.basename(filename)
-
-              # Double-check: skip if already exists (safety net for incremental)
-              if filename_key in existing_fits or os.path.exists(filename):
-                  skipped += 1
-                  continue
-
-              fit_content = None
-              for uid in [athlete_id, "0"]:
-                  url = f"https://intervals.icu/api/v1/athlete/{uid}/activities/{activity_id}/fit-file"
-                  try:
-                      r = requests.get(url, auth=("API_KEY", api_key), timeout=30)
-                      if r.status_code == 200 and len(r.content) > 0:
-                          fit_content = r.content
-                          break
-                      elif r.status_code == 404:
-                          break  # No FIT available (manual entry etc.)
-                  except Exception as e:
-                      print(f"  ⚠️  Exception for {activity_id}: {e}")
-                      continue
-
-              if fit_content:
-                  with open(filename, "wb") as f:
-                      f.write(fit_content)
-                  downloaded += 1
-                  print(f"  ✅ {filename} ({len(fit_content):,} bytes)")
-              else:
-                  failed += 1
-                  print(f"  ⏭️  Sin FIT: {activity_id} ({start_date})")
-
-          print()
-          print(f"📊 Resultado — Descargados: {downloaded} | Ya existían: {skipped} | Sin FIT: {failed}")
           EOF
 
       - name: Push results to Repository
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add -f data/activities_all.json data/activities_clean_60.json data/wellness_clean_60.json
-          git add -f fit-intervals/*.fit 2>/dev/null || true
-          git diff --cached --quiet && echo "No changes to commit" || (git commit -m "Update intervals data + FIT files [skip ci]" && git push)
+          git add -f data/activities_clean_60.json data/wellness_clean_60.json
+          git diff --cached --quiet && echo "No changes to commit" || (git commit -m "Update intervals data [skip ci]" && git push)
