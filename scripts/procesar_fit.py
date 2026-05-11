@@ -8,7 +8,7 @@ import numpy as np
 
 # ---------- CONFIG ----------
 CARPETA_FIT      = Path("FIT")
-VENTANA_DIAS     = 30
+VENTANA_DIAS     = 3000
 DEPORTES_VALIDOS = {"running", "cycling"}
 
 # ---------- FECHA ----------
