@@ -5,9 +5,9 @@
     "type": "Ride",
     "icu_ignore_time": false,
     "icu_ignore_power": false,
-    "icu_training_load": 78,
-    "icu_atl": 51.81576,
-    "icu_ctl": 43.9979,
+    "icu_training_load": 79,
+    "icu_atl": 51.948887,
+    "icu_ctl": 44.021423,
     "icu_ftp": 250,
     "icu_recording_time": 5532,
     "elapsed_time": 5533,
@@ -38,8 +38,8 @@
     "file_type": "fit",
     "icu_athlete_id": "i541784",
     "created": "2026-05-29T05:51:19.563+00:00",
-    "icu_sync_date": "2026-05-29T05:51:20.371+00:00",
-    "analyzed": "2026-05-29T05:51:20.371+00:00",
+    "icu_sync_date": "2026-05-29T13:19:30.520+00:00",
+    "analyzed": "2026-05-29T13:19:30.520+00:00",
     "icu_hr_zones": [
       120,
       134,
@@ -72,14 +72,14 @@
     "icu_training_load_data": 100,
     "interval_summary": [
       "1x 8m6s 76bpm",
-      "1x 25m57s 137bpm",
+      "2x 11m39s 132bpm",
+      "1x 13m56s 142bpm",
       "1x 11m57s 107bpm",
       "1x 16m23s 131bpm",
-      "1x 11m17s 133bpm",
       "1x 16m55s 100bpm",
       "1x 99s 117bpm"
     ],
-    "skyline_chart_bytes": "CAcSDdkDlQzNBdcHpQX3B2MaBzJbR1dYQk4iBwEDAQICAQEoAg==",
+    "skyline_chart_bytes": "CAcSD9kD0QXEBs0F1welBfcHYxoIMldeR1dYQk4iCAECBAECAgEBKAI=",
     "stream_types": [
       "time",
       "cadence",
@@ -105,6 +105,7 @@
     ],
     "tiz_order": "POWER_HR_PACE",
     "polarization_index": 0.29,
+    "icu_intervals_edited": true,
     "icu_lap_count": 7,
     "icu_rpe": 1,
     "feel": 3,
@@ -113,7 +114,7 @@
     "average_altitude": 210.42804,
     "min_altitude": 56.2,
     "max_altitude": 383.0,
-    "hr_load": 78,
+    "hr_load": 79,
     "hr_load_type": "HRSS",
     "recording_stops": [
       0
@@ -121,7 +122,7 @@
     "pace": 5.3192334,
     "athlete_max_hr": 165,
     "group": "c5355d3e",
-    "icu_intensity": 71.24551,
+    "icu_intensity": 71.70075,
     "session_rpe": 91,
     "average_stride": 2.549623,
     "GarminPC": 0.0
