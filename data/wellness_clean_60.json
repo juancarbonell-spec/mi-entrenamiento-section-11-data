@@ -11,13 +11,13 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-06-28T07:34:13.779+00:00",
+    "updated": "2026-06-28T22:46:12.741+00:00",
     "restingHR": 40,
     "hrv": 40.0,
     "sleepSecs": 25860,
     "sleepScore": 93.0,
     "sleepQuality": 1,
-    "steps": 35,
+    "steps": 3621,
     "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 93,
