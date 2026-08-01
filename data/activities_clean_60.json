@@ -1,5 +1,85 @@
 [
   {
+    "id": "i171315033",
+    "start_date_local": "2026-08-01T08:58:00",
+    "type": "WeightTraining",
+    "icu_ignore_time": false,
+    "icu_ignore_power": false,
+    "icu_training_load": 4,
+    "icu_atl": 24.76244,
+    "icu_ctl": 28.900505,
+    "icu_recording_time": 1873,
+    "elapsed_time": 1874,
+    "name": "Fuerza",
+    "start_date": "2026-08-01T06:58:00Z",
+    "moving_time": 1874,
+    "commute": false,
+    "race": false,
+    "average_speed": 0.0,
+    "has_heartrate": true,
+    "max_heartrate": 118,
+    "average_heartrate": 64,
+    "calories": 65,
+    "gap_model": "NONE",
+    "use_elevation_correction": false,
+    "device_name": "Garmin fenix 7",
+    "external_id": "23808288400",
+    "file_sport_index": 0,
+    "file_type": "fit",
+    "icu_athlete_id": "i541784",
+    "created": "2026-08-01T07:29:32.089+00:00",
+    "icu_sync_date": "2026-08-01T07:29:33.919+00:00",
+    "analyzed": "2026-08-01T07:29:33.919+00:00",
+    "icu_hr_zones": [
+      126,
+      134,
+      141,
+      149,
+      153,
+      158,
+      165
+    ],
+    "lthr": 150,
+    "icu_resting_hr": 41,
+    "icu_weight": 70.9,
+    "icu_sweet_spot_min": 0,
+    "icu_sweet_spot_max": 0,
+    "trimp": 5.293822,
+    "icu_warmup_time": 0,
+    "icu_cooldown_time": 0,
+    "icu_ignore_hr": false,
+    "ignore_velocity": false,
+    "ignore_pace": false,
+    "icu_training_load_data": 100,
+    "skyline_chart_bytes": "CAcSAtMOGgEqIgEBKAI=",
+    "stream_types": [
+      "time",
+      "heartrate"
+    ],
+    "has_weather": false,
+    "has_segments": false,
+    "icu_hr_zone_times": [
+      1875,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "tiz_order": "POWER_HR_PACE",
+    "polarization_index": 0.0,
+    "icu_lap_count": 0,
+    "icu_median_time_delta": 1,
+    "source": "GARMIN_CONNECT",
+    "hr_load": 4,
+    "hr_load_type": "HRSS",
+    "icu_intensity": 27.727606,
+    "athlete_max_hr": 165,
+    "group": "ec73d314",
+    "GarminPC": 0.0
+  },
+  {
     "id": "i171014347",
     "start_date_local": "2026-07-31T08:13:55",
     "type": "Run",
@@ -114,10 +194,10 @@
     "max_altitude": 96.0,
     "hr_load": 53,
     "hr_load_type": "HRSS",
+    "icu_intensity": 65.59071,
     "pace": 2.2948928,
     "athlete_max_hr": 170,
     "group": "4d83c262",
-    "icu_intensity": 65.59071,
     "average_stride": 0.83966416,
     "GarminPC": -3.0
   },
@@ -196,9 +276,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 2,
     "hr_load_type": "HRSS",
+    "icu_intensity": 19.38512,
     "athlete_max_hr": 165,
     "group": "01ff559c",
-    "icu_intensity": 19.38512,
     "GarminPC": 0.0
   },
   {
@@ -325,10 +405,10 @@
     "max_altitude": 93.0,
     "hr_load": 49,
     "hr_load_type": "HRSS",
+    "icu_intensity": 63.317383,
     "pace": 2.2752252,
     "athlete_max_hr": 170,
     "group": "791fd0fa",
-    "icu_intensity": 63.317383,
     "average_stride": 0.8379242,
     "GarminPC": -2.0
   },
@@ -407,9 +487,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 27.132938,
     "athlete_max_hr": 165,
     "group": "b9e49f06",
-    "icu_intensity": 27.132938,
     "GarminPC": 0.0
   },
   {
@@ -517,10 +597,10 @@
     "max_altitude": 96.0,
     "hr_load": 45,
     "hr_load_type": "HRSS",
+    "icu_intensity": 58.430473,
     "pace": 2.1482613,
     "athlete_max_hr": 170,
     "group": "b1809e77",
-    "icu_intensity": 58.430473,
     "average_stride": 0.7992317,
     "GarminPC": 1.0
   },
@@ -599,9 +679,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 21.836235,
     "athlete_max_hr": 165,
     "group": "4ec5395b",
-    "icu_intensity": 21.836235,
     "GarminPC": 0.0
   },
   {
@@ -709,10 +789,10 @@
     "max_altitude": 96.0,
     "hr_load": 43,
     "hr_load_type": "HRSS",
+    "icu_intensity": 56.292843,
     "pace": 2.096215,
     "athlete_max_hr": 170,
     "group": "50cbbac2",
-    "icu_intensity": 56.292843,
     "average_stride": 0.7818071,
     "GarminPC": 2.0
   },
@@ -791,9 +871,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 24.920807,
     "athlete_max_hr": 165,
     "group": "1db87cd0",
-    "icu_intensity": 24.920807,
     "GarminPC": 0.0
   },
   {
@@ -904,10 +984,10 @@
     "recording_stops": [
       1653
     ],
+    "icu_intensity": 63.143322,
     "pace": 2.3383205,
     "athlete_max_hr": 170,
     "group": "a36a925d",
-    "icu_intensity": 63.143322,
     "average_stride": 0.85044307,
     "GarminPC": -1.0
   },
@@ -986,9 +1066,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 24.771685,
     "athlete_max_hr": 165,
     "group": "986e1ea8",
-    "icu_intensity": 24.771685,
     "GarminPC": 0.0
   },
   {
@@ -1105,10 +1185,10 @@
     "max_altitude": 96.0,
     "hr_load": 53,
     "hr_load_type": "HRSS",
+    "icu_intensity": 66.45801,
     "pace": 2.3347223,
     "athlete_max_hr": 170,
     "group": "1f94d647",
-    "icu_intensity": 66.45801,
     "average_stride": 0.84985036,
     "GarminPC": -3.0
   },
@@ -1187,9 +1267,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 26.227812,
     "athlete_max_hr": 165,
     "group": "febdc435",
-    "icu_intensity": 26.227812,
     "GarminPC": 0.0
   },
   {
@@ -1306,10 +1386,10 @@
     "max_altitude": 95.0,
     "hr_load": 56,
     "hr_load_type": "HRSS",
+    "icu_intensity": 69.3895,
     "pace": 2.418954,
     "athlete_max_hr": 170,
     "group": "e13614d1",
-    "icu_intensity": 69.3895,
     "average_stride": 0.8738883,
     "GarminPC": -4.0
   },
@@ -1388,9 +1468,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 2,
     "hr_load_type": "HRSS",
+    "icu_intensity": 21.573524,
     "athlete_max_hr": 165,
     "group": "5965a7f0",
-    "icu_intensity": 21.573524,
     "GarminPC": 0.0
   },
   {
@@ -1507,10 +1587,10 @@
     "max_altitude": 96.0,
     "hr_load": 52,
     "hr_load_type": "HRSS",
+    "icu_intensity": 64.20623,
     "pace": 2.2377317,
     "athlete_max_hr": 170,
     "group": "59455455",
-    "icu_intensity": 64.20623,
     "average_stride": 0.82322586,
     "GarminPC": -3.0
   },
@@ -1589,9 +1669,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 28.128433,
     "athlete_max_hr": 165,
     "group": "cea6bdf9",
-    "icu_intensity": 28.128433,
     "GarminPC": 0.0
   },
   {
@@ -1699,10 +1779,10 @@
     "max_altitude": 93.0,
     "hr_load": 58,
     "hr_load_type": "HRSS",
+    "icu_intensity": 71.319565,
     "pace": 2.4391475,
     "athlete_max_hr": 170,
     "group": "44a17163",
-    "icu_intensity": 71.319565,
     "average_stride": 0.8844945,
     "GarminPC": -8.0
   },
@@ -1781,9 +1861,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 28.79263,
     "athlete_max_hr": 165,
     "group": "79a3ab5e",
-    "icu_intensity": 28.79263,
     "GarminPC": 0.0
   },
   {
@@ -1900,10 +1980,10 @@
     "max_altitude": 96.0,
     "hr_load": 61,
     "hr_load_type": "HRSS",
+    "icu_intensity": 72.59462,
     "pace": 2.4124117,
     "athlete_max_hr": 170,
     "group": "9d168414",
-    "icu_intensity": 72.59462,
     "average_stride": 0.8740956,
     "GarminPC": -4.0
   },
@@ -1982,9 +2062,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 5,
     "hr_load_type": "HRSS",
+    "icu_intensity": 27.127392,
     "athlete_max_hr": 165,
     "group": "faa77f5a",
-    "icu_intensity": 27.127392,
     "GarminPC": 0.0
   },
   {
@@ -2101,10 +2181,10 @@
     "max_altitude": 94.0,
     "hr_load": 53,
     "hr_load_type": "HRSS",
+    "icu_intensity": 69.74858,
     "pace": 2.5534449,
     "athlete_max_hr": 170,
     "group": "a32654bd",
-    "icu_intensity": 69.74858,
     "average_stride": 0.9089717,
     "GarminPC": -2.0
   },
@@ -2183,9 +2263,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 30.60866,
     "athlete_max_hr": 165,
     "group": "83725840",
-    "icu_intensity": 30.60866,
     "GarminPC": 0.0
   },
   {
@@ -2302,10 +2382,10 @@
     "max_altitude": 96.0,
     "hr_load": 54,
     "hr_load_type": "HRSS",
+    "icu_intensity": 70.38557,
     "pace": 2.5611188,
     "athlete_max_hr": 170,
     "group": "95777c0c",
-    "icu_intensity": 70.38557,
     "average_stride": 0.9140561,
     "GarminPC": -3.0
   },
@@ -2384,9 +2464,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 25.22731,
     "athlete_max_hr": 165,
     "group": "30fb6090",
-    "icu_intensity": 25.22731,
     "GarminPC": 0.0
   },
   {
@@ -2512,10 +2592,10 @@
     "max_altitude": 93.0,
     "hr_load": 52,
     "hr_load_type": "HRSS",
+    "icu_intensity": 67.235756,
     "pace": 2.4241173,
     "athlete_max_hr": 170,
     "group": "91b70269",
-    "icu_intensity": 67.235756,
     "average_stride": 0.88346803,
     "GarminPC": -2.0
   },
@@ -2594,9 +2674,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 28.074495,
     "athlete_max_hr": 165,
     "group": "ffefee4a",
-    "icu_intensity": 28.074495,
     "GarminPC": 0.0
   },
   {
@@ -2712,10 +2792,10 @@
     "max_altitude": 96.0,
     "hr_load": 53,
     "hr_load_type": "HRSS",
+    "icu_intensity": 67.16923,
     "pace": 2.4013572,
     "athlete_max_hr": 170,
     "group": "cbec1066",
-    "icu_intensity": 67.16923,
     "average_stride": 0.8742791,
     "GarminPC": -3.0
   },
@@ -2794,9 +2874,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 23.618876,
     "athlete_max_hr": 165,
     "group": "a635e33b",
-    "icu_intensity": 23.618876,
     "GarminPC": 0.0
   },
   {
@@ -2921,10 +3001,10 @@
     "max_altitude": 96.0,
     "hr_load": 54,
     "hr_load_type": "HRSS",
+    "icu_intensity": 68.69095,
     "pace": 2.4562232,
     "athlete_max_hr": 170,
     "group": "2f10e9eb",
-    "icu_intensity": 68.69095,
     "average_stride": 0.8859529,
     "GarminPC": -3.0
   },
@@ -3003,9 +3083,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 24.326546,
     "athlete_max_hr": 165,
     "group": "029ccf5f",
-    "icu_intensity": 24.326546,
     "GarminPC": 0.0
   },
   {
@@ -3120,10 +3200,10 @@
     "max_altitude": 93.0,
     "hr_load": 54,
     "hr_load_type": "HRSS",
+    "icu_intensity": 69.70499,
     "pace": 2.536186,
     "athlete_max_hr": 170,
     "group": "72a47581",
-    "icu_intensity": 69.70499,
     "average_stride": 0.90941566,
     "GarminPC": -4.0
   },
@@ -3202,9 +3282,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 28.136164,
     "athlete_max_hr": 165,
     "group": "2cca2fb7",
-    "icu_intensity": 28.136164,
     "GarminPC": 0.0
   },
   {
@@ -3321,10 +3401,10 @@
     "recording_stops": [
       3663
     ],
+    "icu_intensity": 56.83097,
     "pace": 2.2216673,
     "athlete_max_hr": 170,
     "group": "ff65109f",
-    "icu_intensity": 56.83097,
     "average_stride": 0.8240998,
     "GarminPC": 0.0
   },
@@ -3403,9 +3483,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 2,
     "hr_load_type": "HRSS",
+    "icu_intensity": 19.955704,
     "athlete_max_hr": 165,
     "group": "099a01ce",
-    "icu_intensity": 19.955704,
     "GarminPC": 0.0
   },
   {
@@ -3523,10 +3603,10 @@
     "max_altitude": 96.0,
     "hr_load": 42,
     "hr_load_type": "HRSS",
+    "icu_intensity": 56.77923,
     "pace": 2.1851406,
     "athlete_max_hr": 170,
     "group": "47dc2c79",
-    "icu_intensity": 56.77923,
     "average_stride": 0.8091538,
     "GarminPC": -4.0
   },
@@ -3605,9 +3685,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 26.746033,
     "athlete_max_hr": 165,
     "group": "b23660db",
-    "icu_intensity": 26.746033,
     "GarminPC": 0.0
   },
   {
@@ -3732,10 +3812,10 @@
     "max_altitude": 96.0,
     "hr_load": 50,
     "hr_load_type": "HRSS",
+    "icu_intensity": 64.69966,
     "pace": 2.384893,
     "athlete_max_hr": 170,
     "group": "c124ac4b",
-    "icu_intensity": 64.69966,
     "average_stride": 0.8683985,
     "GarminPC": 0.0
   },
@@ -3814,9 +3894,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 2,
     "hr_load_type": "HRSS",
+    "icu_intensity": 23.111137,
     "athlete_max_hr": 165,
     "group": "16aa2ace",
-    "icu_intensity": 23.111137,
     "GarminPC": 0.0
   },
   {
@@ -3929,10 +4009,10 @@
     "max_altitude": 96.0,
     "hr_load": 48,
     "hr_load_type": "HRSS",
+    "icu_intensity": 61.898994,
     "pace": 2.2612023,
     "athlete_max_hr": 170,
     "group": "3b3c82f5",
-    "icu_intensity": 61.898994,
     "average_stride": 0.82964253,
     "GarminPC": -2.0
   },
@@ -4011,9 +4091,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 26.63818,
     "athlete_max_hr": 165,
     "group": "d86094dd",
-    "icu_intensity": 26.63818,
     "GarminPC": 0.0
   },
   {
@@ -4139,10 +4219,10 @@
     "max_altitude": 96.0,
     "hr_load": 65,
     "hr_load_type": "HRSS",
+    "icu_intensity": 77.559166,
     "pace": 2.6569552,
     "athlete_max_hr": 170,
     "group": "763803d2",
-    "icu_intensity": 77.559166,
     "average_stride": 0.94589186,
     "GarminPC": -2.0
   },
@@ -4221,9 +4301,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 27.816856,
     "athlete_max_hr": 165,
     "group": "7048b69e",
-    "icu_intensity": 27.816856,
     "GarminPC": 0.0
   },
   {
@@ -4349,10 +4429,10 @@
     "max_altitude": 96.0,
     "hr_load": 59,
     "hr_load_type": "HRSS",
+    "icu_intensity": 74.20829,
     "pace": 2.5970626,
     "athlete_max_hr": 170,
     "group": "9832cc9e",
-    "icu_intensity": 74.20829,
     "average_stride": 0.93274784,
     "GarminPC": -2.0
   },
@@ -4431,9 +4511,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 4,
     "hr_load_type": "HRSS",
+    "icu_intensity": 28.213825,
     "athlete_max_hr": 165,
     "group": "7019d628",
-    "icu_intensity": 28.213825,
     "GarminPC": 0.0
   },
   {
@@ -4559,10 +4639,10 @@
     "max_altitude": 96.0,
     "hr_load": 52,
     "hr_load_type": "HRSS",
+    "icu_intensity": 67.83635,
     "pace": 2.5038962,
     "athlete_max_hr": 170,
     "group": "b841aa8a",
-    "icu_intensity": 67.83635,
     "average_stride": 0.9040269,
     "GarminPC": -1.0
   },
@@ -4641,9 +4721,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 21.977383,
     "athlete_max_hr": 165,
     "group": "29304d27",
-    "icu_intensity": 21.977383,
     "GarminPC": 0.0
   },
   {
@@ -4767,10 +4847,10 @@
     "max_altitude": 96.0,
     "hr_load": 45,
     "hr_load_type": "HRSS",
+    "icu_intensity": 61.544308,
     "pace": 2.3751836,
     "athlete_max_hr": 170,
     "group": "99fda409",
-    "icu_intensity": 61.544308,
     "average_stride": 0.85914356,
     "GarminPC": 0.0
   },
@@ -4895,10 +4975,10 @@
     "max_altitude": 96.0,
     "hr_load": 49,
     "hr_load_type": "HRSS",
+    "icu_intensity": 65.90719,
     "pace": 2.4958143,
     "athlete_max_hr": 170,
     "group": "77f2e2e2",
-    "icu_intensity": 65.90719,
     "average_stride": 0.89266175,
     "GarminPC": -1.0
   },
@@ -4977,9 +5057,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 23.151245,
     "athlete_max_hr": 165,
     "group": "aa08a50e",
-    "icu_intensity": 23.151245,
     "GarminPC": 0.0
   },
   {
@@ -5098,10 +5178,10 @@
     "recording_stops": [
       4003
     ],
+    "icu_intensity": 65.70831,
     "pace": 2.4141915,
     "athlete_max_hr": 170,
     "group": "4fecafd8",
-    "icu_intensity": 65.70831,
     "average_stride": 0.8736214,
     "GarminPC": -1.0
   },
@@ -5180,9 +5260,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 2,
     "hr_load_type": "HRSS",
+    "icu_intensity": 18.437553,
     "athlete_max_hr": 165,
     "group": "d97841fc",
-    "icu_intensity": 18.437553,
     "GarminPC": 0.0
   },
   {
@@ -5311,10 +5391,10 @@
     "recording_stops": [
       3939
     ],
+    "icu_intensity": 70.800125,
     "pace": 2.5699518,
     "athlete_max_hr": 170,
     "group": "ad63445a",
-    "icu_intensity": 70.800125,
     "average_stride": 0.9163222,
     "GarminPC": -4.0
   },
@@ -5393,9 +5473,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 3,
     "hr_load_type": "HRSS",
+    "icu_intensity": 23.936255,
     "athlete_max_hr": 165,
     "group": "e3c6e89a",
-    "icu_intensity": 23.936255,
     "GarminPC": 0.0
   },
   {
@@ -5520,10 +5600,10 @@
     "max_altitude": 96.0,
     "hr_load": 53,
     "hr_load_type": "HRSS",
+    "icu_intensity": 71.57879,
     "pace": 2.7131147,
     "athlete_max_hr": 170,
     "group": "fb82e2c0",
-    "icu_intensity": 71.57879,
     "average_stride": 0.9552866,
     "GarminPC": -1.0
   },
@@ -5602,9 +5682,9 @@
     "source": "GARMIN_CONNECT",
     "hr_load": 2,
     "hr_load_type": "HRSS",
+    "icu_intensity": 21.908903,
     "athlete_max_hr": 165,
     "group": "b210d648",
-    "icu_intensity": 21.908903,
     "GarminPC": 0.0
   },
   {
@@ -5716,10 +5796,10 @@
     "recording_stops": [
       2346
     ],
+    "icu_intensity": 64.8309,
     "pace": 2.5503235,
     "athlete_max_hr": 170,
     "group": "6263b368",
-    "icu_intensity": 64.8309,
     "average_stride": 0.9044473,
     "GarminPC": 4.0
   },
@@ -5845,10 +5925,10 @@
     "max_altitude": 96.0,
     "hr_load": 55,
     "hr_load_type": "HRSS",
+    "icu_intensity": 68.66066,
     "pace": 2.4250193,
     "athlete_max_hr": 170,
     "group": "e44a9545",
-    "icu_intensity": 68.66066,
     "average_stride": 0.8664761,
     "GarminPC": -1.0
   }
