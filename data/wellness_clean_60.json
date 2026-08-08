@@ -11,7 +11,7 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-08-08T07:40:28.116+00:00",
+    "updated": "2026-08-08T11:06:57.517+00:00",
     "weight": 70.9,
     "restingHR": 41,
     "hrv": 42.0,
@@ -20,7 +20,7 @@
     "sleepQuality": 2,
     "bodyFat": 19.0,
     "vo2max": 46.0,
-    "steps": 13138,
+    "steps": 14749,
     "tempWeight": false,
     "tempRestingHR": false,
     "BodyBatteryMax": 87,
