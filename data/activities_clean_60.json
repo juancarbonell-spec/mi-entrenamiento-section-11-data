@@ -40,11 +40,11 @@
       165
     ],
     "lthr": 150,
-    "icu_resting_hr": 42,
+    "icu_resting_hr": 41,
     "icu_weight": 69.8,
     "icu_sweet_spot_min": 0,
     "icu_sweet_spot_max": 0,
-    "trimp": 4.4620442,
+    "trimp": 4.6682973,
     "icu_warmup_time": 0,
     "icu_cooldown_time": 0,
     "icu_ignore_hr": false,
