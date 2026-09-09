@@ -11,9 +11,17 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-09-08T07:26:37.849+00:00",
+    "updated": "2026-09-09T05:43:03.694+00:00",
+    "restingHR": 44,
+    "hrv": 41.0,
+    "sleepSecs": 27240,
+    "sleepScore": 86.0,
+    "sleepQuality": 2,
+    "steps": 58,
     "tempWeight": false,
-    "tempRestingHR": false
+    "tempRestingHR": false,
+    "BodyBatteryMax": 75,
+    "BodyBatteryMin": 24
   },
   {
     "id": "2026-09-08",
@@ -27,17 +35,17 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-09-08T11:11:22.548+00:00",
+    "updated": "2026-09-09T05:42:59.568+00:00",
     "restingHR": 45,
     "hrv": 42.0,
     "sleepSecs": 22140,
     "sleepScore": 64.0,
     "sleepQuality": 3,
-    "steps": 2009,
+    "steps": 3994,
     "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 74,
-    "BodyBatteryMin": 26
+    "BodyBatteryMin": 21
   },
   {
     "id": "2026-09-07",
