@@ -11,17 +11,17 @@
         "type": "Ride"
       }
     ],
-    "updated": "2026-10-26T08:45:50.781+00:00",
+    "updated": "2026-10-26T17:08:19.667+00:00",
     "restingHR": 45,
     "hrv": 41.0,
     "sleepSecs": 18060,
     "sleepScore": 55.0,
     "sleepQuality": 4,
-    "steps": 120,
+    "steps": 3487,
     "tempWeight": true,
     "tempRestingHR": false,
     "BodyBatteryMax": 78,
-    "BodyBatteryMin": 39
+    "BodyBatteryMin": 31
   },
   {
     "id": "2026-10-25",
