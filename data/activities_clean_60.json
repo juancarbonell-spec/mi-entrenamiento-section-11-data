@@ -1,5 +1,138 @@
 [
   {
+    "id": "i215716400",
+    "start_date_local": "2026-11-28T14:16:48",
+    "type": "Run",
+    "icu_ignore_time": false,
+    "icu_ignore_power": false,
+    "icu_training_load": 72,
+    "icu_atl": 39.43548,
+    "icu_ctl": 24.09149,
+    "icu_recording_time": 4310,
+    "elapsed_time": 4311,
+    "name": "Palma Carrera",
+    "start_date": "2026-11-28T13:16:48Z",
+    "distance": 10483.63,
+    "icu_distance": 10483.63,
+    "moving_time": 4310,
+    "coasting_time": 0,
+    "total_elevation_gain": 98.25038,
+    "total_elevation_loss": 101.195206,
+    "commute": false,
+    "race": false,
+    "max_speed": 4.04,
+    "average_speed": 2.432,
+    "device_watts": true,
+    "has_heartrate": true,
+    "max_heartrate": 170,
+    "average_heartrate": 136,
+    "average_cadence": 83.99791,
+    "calories": 690,
+    "average_temp": 21.147728,
+    "min_temp": 19,
+    "max_temp": 23,
+    "average_stance_time": 289.6366,
+    "average_vertical_oscillation": 72.04191,
+    "average_vertical_ratio": 8.25167,
+    "average_step_length": 862.44617,
+    "average_stance_time_percent": 40.673122,
+    "average_stance_time_balance": 49.15378,
+    "gap": 2.4395647,
+    "gap_model": "STRAVA_RUN",
+    "use_elevation_correction": true,
+    "device_name": "Garmin fenix 7",
+    "external_id": "25226036389",
+    "file_sport_index": 0,
+    "file_type": "fit",
+    "icu_athlete_id": "i541784",
+    "created": "2026-11-28T14:29:02.843+00:00",
+    "icu_sync_date": "2026-11-28T14:29:05.758+00:00",
+    "analyzed": "2026-11-28T14:29:05.758+00:00",
+    "icu_hr_zones": [
+      126,
+      140,
+      147,
+      157,
+      170
+    ],
+    "lthr": 159,
+    "icu_resting_hr": 43,
+    "icu_weight": 69.8,
+    "icu_sweet_spot_min": 0,
+    "icu_sweet_spot_max": 0,
+    "trimp": 137.3398,
+    "icu_warmup_time": 300,
+    "icu_cooldown_time": 300,
+    "icu_ignore_hr": false,
+    "ignore_velocity": false,
+    "ignore_pace": false,
+    "icu_training_load_data": 100,
+    "interval_summary": [
+      "1x 1h11m 135bpm"
+    ],
+    "skyline_chart_bytes": "CAUSAtghGgFUIgECKAI=",
+    "stream_types": [
+      "time",
+      "watts",
+      "cadence",
+      "heartrate",
+      "distance",
+      "altitude",
+      "latlng",
+      "velocity_smooth",
+      "temp",
+      "hrv",
+      "respiration",
+      "stance_time",
+      "stance_time_percent",
+      "stance_time_balance",
+      "vertical_oscillation",
+      "vertical_ratio",
+      "step_length",
+      "torque",
+      "fixed_altitude"
+    ],
+    "has_weather": false,
+    "has_segments": false,
+    "power_field_names": [
+      "power"
+    ],
+    "power_field": "power",
+    "icu_hr_zone_times": [
+      1173,
+      1391,
+      598,
+      906,
+      244
+    ],
+    "use_gap_zone_times": true,
+    "tiz_order": "POWER_HR_PACE",
+    "polarization_index": 0.98,
+    "icu_lap_count": 1,
+    "icu_hrr": {
+      "start_index": 1476,
+      "end_index": 1536,
+      "start_time": 1476,
+      "end_time": 1536,
+      "start_bpm": 170,
+      "end_bpm": 154,
+      "hrr": 16
+    },
+    "icu_median_time_delta": 1,
+    "p30s_exponent": 3.0,
+    "source": "GARMIN_CONNECT",
+    "average_altitude": 59.069496,
+    "min_altitude": 41.40223,
+    "max_altitude": 96.0,
+    "hr_load": 72,
+    "hr_load_type": "HRSS",
+    "average_stride": 0.8687347,
+    "icu_intensity": 77.54948,
+    "pace": 2.4323967,
+    "athlete_max_hr": 170,
+    "group": "dfefe093"
+  },
+  {
     "id": "i214892290",
     "start_date_local": "2026-11-26T11:15:30",
     "type": "Run",
@@ -126,11 +259,11 @@
     "max_altitude": 96.0,
     "hr_load": 82,
     "hr_load_type": "HRSS",
+    "average_stride": 0.8744532,
     "icu_intensity": 82.63529,
     "pace": 2.4490957,
     "athlete_max_hr": 170,
-    "group": "5d5b57fb",
-    "average_stride": 0.8744532
+    "group": "5d5b57fb"
   },
   {
     "id": "i214649502",
@@ -339,11 +472,11 @@
     "max_altitude": 96.0,
     "hr_load": 65,
     "hr_load_type": "HRSS",
+    "average_stride": 0.87109596,
     "icu_intensity": 75.04511,
     "pace": 2.4309242,
     "athlete_max_hr": 170,
-    "group": "0a14024d",
-    "average_stride": 0.87109596
+    "group": "0a14024d"
   },
   {
     "id": "i213610909",
@@ -476,11 +609,11 @@
       261,
       1257
     ],
+    "average_stride": 0.8093891,
     "icu_intensity": 69.73363,
     "pace": 2.2185302,
     "athlete_max_hr": 170,
-    "group": "ba22ba67",
-    "average_stride": 0.8093891
+    "group": "ba22ba67"
   },
   {
     "id": "i213164240",
@@ -694,11 +827,11 @@
       39,
       2358
     ],
+    "average_stride": 0.83507276,
     "icu_intensity": 78.93042,
     "pace": 2.2944663,
     "athlete_max_hr": 170,
-    "group": "0cf1ca03",
-    "average_stride": 0.83507276
+    "group": "0cf1ca03"
   },
   {
     "id": "i212150299",
@@ -907,11 +1040,11 @@
     "max_altitude": 94.0,
     "hr_load": 65,
     "hr_load_type": "HRSS",
+    "average_stride": 0.83532375,
     "icu_intensity": 73.496,
     "pace": 2.315778,
     "athlete_max_hr": 170,
-    "group": "b421fba1",
-    "average_stride": 0.83532375
+    "group": "b421fba1"
   },
   {
     "id": "i210691889",
@@ -1043,11 +1176,11 @@
     "recording_stops": [
       2810
     ],
+    "average_stride": 0.8272942,
     "icu_intensity": 74.8581,
     "pace": 2.262606,
     "athlete_max_hr": 170,
-    "group": "fb94b51e",
-    "average_stride": 0.8272942
+    "group": "fb94b51e"
   },
   {
     "id": "i210300529",
@@ -1251,11 +1384,11 @@
     "recording_stops": [
       3
     ],
+    "average_stride": 0.7741059,
     "icu_intensity": 71.80703,
     "pace": 2.0982008,
     "athlete_max_hr": 170,
-    "group": "48eb4f59",
-    "average_stride": 0.7741059
+    "group": "48eb4f59"
   },
   {
     "id": "i209088989",
@@ -1387,11 +1520,11 @@
     "recording_stops": [
       2621
     ],
+    "average_stride": 0.7990502,
     "icu_intensity": 74.42858,
     "pace": 2.1615608,
     "athlete_max_hr": 170,
-    "group": "057450b4",
-    "average_stride": 0.7990502
+    "group": "057450b4"
   },
   {
     "id": "i208854215",
@@ -1604,11 +1737,11 @@
     "recording_stops": [
       4
     ],
+    "average_stride": 0.83211577,
     "icu_intensity": 74.16861,
     "pace": 2.2753038,
     "athlete_max_hr": 170,
-    "group": "3c5135c9",
-    "average_stride": 0.83211577
+    "group": "3c5135c9"
   },
   {
     "id": "i207332585",
@@ -1738,11 +1871,11 @@
     "max_altitude": 94.4808,
     "hr_load": 71,
     "hr_load_type": "HRSS",
+    "average_stride": 0.80369544,
     "icu_intensity": 73.29396,
     "pace": 2.1915953,
     "athlete_max_hr": 170,
-    "group": "9ec05eda",
-    "average_stride": 0.80369544
+    "group": "9ec05eda"
   },
   {
     "id": "i206936474",
@@ -1877,11 +2010,11 @@
     "recording_stops": [
       1
     ],
+    "average_stride": 0.862606,
     "icu_intensity": 78.68172,
     "pace": 2.374974,
     "athlete_max_hr": 170,
-    "group": "26346295",
-    "average_stride": 0.862606
+    "group": "26346295"
   },
   {
     "id": "i206677679",
@@ -2085,11 +2218,11 @@
     "recording_stops": [
       4010
     ],
+    "average_stride": 0.8371713,
     "icu_intensity": 82.70137,
     "pace": 2.3291368,
     "athlete_max_hr": 170,
-    "group": "37a7dd61",
-    "average_stride": 0.8371713
+    "group": "37a7dd61"
   },
   {
     "id": "i205222871",
@@ -2222,11 +2355,11 @@
     "recording_stops": [
       1128
     ],
+    "average_stride": 0.83407223,
     "icu_intensity": 81.65877,
     "pace": 2.3206694,
     "athlete_max_hr": 170,
-    "group": "12c10736",
-    "average_stride": 0.83407223
+    "group": "12c10736"
   },
   {
     "id": "i204293395",
@@ -2438,11 +2571,11 @@
     "recording_stops": [
       2774
     ],
+    "average_stride": 0.82953554,
     "icu_intensity": 77.10539,
     "pace": 2.2656198,
     "athlete_max_hr": 170,
-    "group": "31108490",
-    "average_stride": 0.82953554
+    "group": "31108490"
   },
   {
     "id": "i202634123",
@@ -2573,11 +2706,11 @@
     "max_altitude": 96.0,
     "hr_load": 72,
     "hr_load_type": "HRSS",
+    "average_stride": 0.8047979,
     "icu_intensity": 74.19921,
     "pace": 2.1819308,
     "athlete_max_hr": 170,
-    "group": "493503a2",
-    "average_stride": 0.8047979
+    "group": "493503a2"
   },
   {
     "id": "i201795216",
@@ -2778,11 +2911,11 @@
     "max_altitude": 94.0,
     "hr_load": 76,
     "hr_load_type": "HRSS",
+    "average_stride": 0.8423958,
     "icu_intensity": 77.827484,
     "pace": 2.3053508,
     "athlete_max_hr": 170,
-    "group": "b509f0d9",
-    "average_stride": 0.8423958
+    "group": "b509f0d9"
   },
   {
     "id": "i200957887",
@@ -2985,11 +3118,11 @@
     "recording_stops": [
       2314
     ],
+    "average_stride": 0.8368684,
     "icu_intensity": 70.28599,
     "pace": 2.2842214,
     "athlete_max_hr": 170,
-    "group": "cb3cdcdc",
-    "average_stride": 0.8368684
+    "group": "cb3cdcdc"
   },
   {
     "id": "i200264939",
@@ -3192,11 +3325,11 @@
     "recording_stops": [
       3784
     ],
+    "average_stride": 0.7855527,
     "icu_intensity": 75.56388,
     "pace": 2.1042392,
     "athlete_max_hr": 170,
-    "group": "65219dee",
-    "average_stride": 0.7855527
+    "group": "65219dee"
   },
   {
     "id": "i199372897",
@@ -3396,11 +3529,11 @@
     "max_altitude": 92.0,
     "hr_load": 31,
     "hr_load_type": "HRSS",
+    "average_stride": 0.8163122,
     "icu_intensity": 70.03924,
     "pace": 2.204545,
     "athlete_max_hr": 170,
-    "group": "8e5308b8",
-    "average_stride": 0.8163122
+    "group": "8e5308b8"
   },
   {
     "id": "i198199984",
